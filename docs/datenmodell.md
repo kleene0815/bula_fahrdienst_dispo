@@ -96,6 +96,7 @@ Eine Fahrt fasst mehrere Aufträge zusammen und wird einem Fahrer und Fahrzeug z
 | Spalte | Typ | Beschreibung |
 |---|---|---|
 | `id` | `uuid` PK | |
+| `trip_number` | `integer` | Fortlaufende Nummer, automatisch vergeben (`GENERATED ALWAYS AS IDENTITY`) |
 | `status` | `text` | Enum: `geplant`, `aktiv`, `abgeschlossen`, `abgebrochen` |
 | `driver_id` | `uuid` FK → `users.id` | Zugeteilter Fahrer (nullable bis Zuteilung) |
 | `vehicle_id` | `uuid` FK → `vehicles.id` | Zugeteiltes Fahrzeug (nullable bis Zuteilung) |
