@@ -31,5 +31,5 @@ Konzeptionsphase abgeschlossen. Nächste Schritte:
 
 - [x] API-Endpunkte definieren
 - [x] Technologie-Entscheidung Backend
-- [ ] Datenbankschema als SQL-Migration
+- [x] Datenbankschema als SQL-Migration
 - [ ] Implementierung
