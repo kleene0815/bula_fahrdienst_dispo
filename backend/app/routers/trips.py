@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import CurrentUser, DisponentUser, FahrerUser
 from app.database import get_db
 from app.events import broadcaster
-from app.models import Order, StatusLog, Trip, TripOrder, Vehicle
+from app.models import Order, StatusLog, Trip, TripOrder, User, Vehicle
 from app.schemas.orders import OrderOut
 from app.schemas.trips import TripCreate, TripOut, TripUpdate
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/trips", tags=["trips"])
 
 def _trip_query():
     return select(Trip).options(
-        selectinload(Trip.driver),
+        selectinload(Trip.driver).selectinload(User.roles),
         selectinload(Trip.vehicle),
         selectinload(Trip.trip_orders).selectinload(TripOrder.order),
     )
