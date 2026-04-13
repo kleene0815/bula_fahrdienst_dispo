@@ -8,24 +8,24 @@
   >
     <div class="fahrt-karte__header">
       <div class="fahrt-karte__title">
-        <strong>Fahrt #{{ trip.trip_number }}</strong>
+        <strong>{{ trip.name || 'Fahrt #' + trip.trip_number }}</strong>
         <span :class="`badge badge--${trip.status}`">{{ trip.status }}</span>
       </div>
       <div class="fahrt-karte__actions">
-        <button v-if="trip.status === 'geplant'" class="btn-ghost" style="font-size:12px;padding:4px 8px" @click="$emit('edit')">Bearbeiten</button>
-        <button v-if="canComplete" class="btn-success" style="font-size:12px;padding:4px 8px" @click="$emit('complete')">Fahrt abschließen</button>
-        <button v-if="canAbort" class="btn-danger" style="font-size:12px;padding:4px 8px" @click="$emit('abort')">Abbrechen</button>
-        <button v-if="trip.status === 'geplant'" class="btn-ghost" style="font-size:12px;padding:4px 8px" @click="$emit('print')">Drucken</button>
+        <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Bearbeiten" @click="$emit('edit')">✏</button>
+        <button v-if="canComplete" class="btn-icon btn-icon--success" title="Fahrt abschließen" @click="$emit('complete')">✓</button>
+        <button v-if="canAbort" class="btn-icon btn-icon--ghost-muted" title="Fahrt abbrechen" @click="onAbort">✕</button>
+        <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Drucken" @click="$emit('print')">🖨</button>
       </div>
     </div>
 
     <div class="fahrt-karte__info">
-      <span>🚗 {{ trip.vehicle?.name }} ({{ trip.vehicle?.license_plate }})</span>
-      <span>👤 {{ trip.driver?.name }}</span>
+      <span :class="{ 'info--warn': !trip.vehicle }">🚗 {{ trip.vehicle ? `${trip.vehicle.name} (${trip.vehicle.license_plate})` : 'Fahrzeug fehlt' }}</span>
+      <span :class="{ 'info--warn': !trip.driver }">👤 {{ trip.driver?.name ?? 'Fahrer fehlt' }}</span>
     </div>
 
     <!-- Kapazitätsindikator -->
-    <div v-if="trip.status !== 'abgeschlossen'" class="kapazitaet">
+    <div v-if="trip.status !== 'abgeschlossen' && trip.vehicle" class="kapazitaet">
       <div class="kapazitaet__bar">
         <div
           class="kapazitaet__fill"
@@ -33,7 +33,7 @@
           :style="{ width: Math.min(seatRatio * 100, 100) + '%' }"
         ></div>
       </div>
-      <span class="kapazitaet__label">{{ usedSeats }} / {{ trip.vehicle?.seats ?? '?' }} Sitze</span>
+      <span class="kapazitaet__label">{{ usedSeats }} / {{ trip.vehicle.seats }} Sitze</span>
     </div>
 
     <!-- Stoppliste -->
@@ -62,6 +62,11 @@ function onDrop(event) {
   const orderId = event.dataTransfer.getData('order-id')
   if (!orderId) return
   emit('drop-order', orderId)
+}
+
+function onAbort() {
+  if (!confirm('Fahrt wirklich abbrechen?')) return
+  emit('abort')
 }
 
 const usedSeats = computed(() => {
@@ -108,8 +113,10 @@ function formatTime(iso) {
 }
 .fahrt-karte__header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .fahrt-karte__title { display: flex; align-items: center; gap: 8px; }
-.fahrt-karte__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.fahrt-karte__actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .fahrt-karte__info { font-size: 12px; color: #666; display: flex; gap: 16px; margin-bottom: 8px; }
+
+.info--warn { color: #e65100; font-weight: 500; }
 
 .kapazitaet { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .kapazitaet__bar { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
@@ -128,4 +135,30 @@ function formatTime(iso) {
 .stopp__num { width: 20px; height: 20px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .stopp__ziel { flex: 1; }
 .stopp__deadline { color: #888; }
+
+.btn-icon {
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  line-height: 1;
+  border: none;
+}
+.btn-icon--ghost {
+  background: transparent;
+  color: #1565c0;
+  border: 1px solid #1565c0;
+}
+.btn-icon--success {
+  background: #2e7d32;
+  color: #fff;
+}
+.btn-icon--ghost-muted {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #ddd;
+}
+.btn-icon--ghost-muted:hover {
+  color: #c62828;
+  border-color: #c62828;
+}
 </style>

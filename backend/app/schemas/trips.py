@@ -22,13 +22,15 @@ class TripOrderOut(BaseModel):
 
 
 class TripCreate(BaseModel):
-    driver_id: uuid.UUID
-    vehicle_id: uuid.UUID
+    name: str | None = None
+    driver_id: uuid.UUID | None = None
+    vehicle_id: uuid.UUID | None = None
     order_ids: list[uuid.UUID]
     notes: str | None = None
 
 
 class TripUpdate(BaseModel):
+    name: str | None = None
     driver_id: uuid.UUID | None = None
     vehicle_id: uuid.UUID | None = None
     order_ids: list[uuid.UUID] | None = None
@@ -38,6 +40,7 @@ class TripUpdate(BaseModel):
 class TripOut(BaseModel):
     id: uuid.UUID
     trip_number: int
+    name: str | None
     status: str
     driver: DriverInfo | None
     vehicle: VehicleOut | None
@@ -54,6 +57,7 @@ class TripOut(BaseModel):
         return cls(
             id=trip.id,
             trip_number=trip.trip_number,
+            name=trip.name,
             status=trip.status,
             driver=DriverInfo(id=trip.driver.id, name=trip.driver.name) if trip.driver else None,
             vehicle=VehicleOut.model_validate(trip.vehicle) if trip.vehicle else None,

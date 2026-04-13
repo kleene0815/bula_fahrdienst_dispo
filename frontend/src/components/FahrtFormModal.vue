@@ -6,9 +6,15 @@
         <button class="btn-ghost" @click="$emit('close')">✕</button>
       </div>
       <div class="modal__body">
+        <!-- Name -->
+        <section class="section">
+          <h4>Name <span class="optional">(optional)</span></h4>
+          <input v-model="form.name" type="text" placeholder="Fahrt #wird automatisch vergeben" />
+        </section>
+
         <!-- Fahrer -->
         <section class="section">
-          <h4>Fahrer</h4>
+          <h4>Fahrer <span class="optional">(optional)</span></h4>
           <div class="card-grid">
             <button
               v-for="u in users"
@@ -16,14 +22,14 @@
               class="select-card"
               :class="{ selected: form.driver_id === u.id }"
               type="button"
-              @click="form.driver_id = u.id"
+              @click="form.driver_id = form.driver_id === u.id ? null : u.id"
             >{{ u.name }}</button>
           </div>
         </section>
 
         <!-- Fahrzeug -->
         <section class="section">
-          <h4>Fahrzeug</h4>
+          <h4>Fahrzeug <span class="optional">(optional)</span></h4>
           <div class="card-grid">
             <button
               v-for="v in vehiclesStore.vehicles"
@@ -31,7 +37,7 @@
               class="select-card"
               :class="{ selected: form.vehicle_id === v.id }"
               type="button"
-              @click="form.vehicle_id = v.id"
+              @click="form.vehicle_id = form.vehicle_id === v.id ? null : v.id"
             >
               <strong>{{ v.name }}</strong>
               <small>{{ v.license_plate }} · {{ v.seats }} Sitze</small>
@@ -63,8 +69,8 @@
           </div>
         </section>
 
-        <!-- Kapazität -->
-        <section class="section">
+        <!-- Kapazität (nur wenn Fahrzeug gewählt) -->
+        <section v-if="form.vehicle_id" class="section">
           <h4>Kapazität</h4>
           <div class="kapazitaet">
             <div class="kapazitaet__bar">
@@ -126,6 +132,7 @@ if (props.preSelectedOrderId && !initialOrderIds.includes(props.preSelectedOrder
 }
 
 const form = reactive({
+  name: props.trip?.name ?? '',
   driver_id: props.trip?.driver?.id ?? null,
   vehicle_id: props.trip?.vehicle?.id ?? null,
   order_ids: initialOrderIds,
@@ -154,16 +161,23 @@ const selectedVehicleSeats = computed(() => selectedVehicle.value?.seats ?? '?')
 const seatRatio = computed(() =>
   selectedVehicle.value ? usedSeats.value / selectedVehicle.value.seats : 0
 )
-const canSave = computed(() => form.driver_id && form.vehicle_id && form.order_ids.length > 0)
+const canSave = computed(() => form.order_ids.length > 0)
 
 async function submit() {
   saving.value = true
   error.value = null
   try {
+    const payload = {
+      name: form.name || null,
+      driver_id: form.driver_id,
+      vehicle_id: form.vehicle_id,
+      order_ids: form.order_ids,
+      notes: form.notes || null,
+    }
     if (props.trip) {
-      await tripsStore.update(props.trip.id, form)
+      await tripsStore.update(props.trip.id, payload)
     } else {
-      await tripsStore.create(form)
+      await tripsStore.create(payload)
     }
     emit('saved')
   } catch (e) {
@@ -194,6 +208,7 @@ onMounted(async () => {
 
 .section { margin-bottom:20px; }
 .section h4 { font-size:13px;font-weight:600;color:#555;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px; }
+.optional { font-weight:400;color:#aaa;text-transform:none;letter-spacing:0; }
 
 .card-grid { display:flex;flex-wrap:wrap;gap:8px; }
 .select-card {

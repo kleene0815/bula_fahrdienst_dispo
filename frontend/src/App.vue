@@ -52,6 +52,10 @@ body {
 .badge--normal { background: #e3f2fd; color: #1565c0; }
 .badge--hoch   { background: #ffebee; color: #c62828; }
 
+.badge--besorgung { background: #e8f5e9; color: #2e7d32; }
+.badge--hinfahrt  { background: #e3f2fd; color: #1565c0; }
+.badge--abholung  { background: #fff3e0; color: #e65100; }
+
 button {
   cursor: pointer;
   border: none;

@@ -106,13 +106,14 @@ async def create_trip(
         if o.status != "offen":
             raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen (Status: {o.status})")
 
-    # Kapazitätsprüfung
-    vehicle = await db.get(Vehicle, body.vehicle_id)
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Fahrzeug nicht gefunden")
-    needed = _compute_seats(orders)
-    if needed > vehicle.seats:
-        raise HTTPException(status_code=409, detail=f"Kapazität überschritten: {needed} von {vehicle.seats} Sitzen belegt")
+    # Kapazitätsprüfung (nur wenn Fahrzeug gewählt)
+    if body.vehicle_id:
+        vehicle = await db.get(Vehicle, body.vehicle_id)
+        if not vehicle:
+            raise HTTPException(status_code=404, detail="Fahrzeug nicht gefunden")
+        needed = _compute_seats(orders)
+        if needed > vehicle.seats:
+            raise HTTPException(status_code=409, detail=f"Kapazität überschritten: {needed} von {vehicle.seats} Sitzen belegt")
 
     # Nächste trip_number ermitteln
     from sqlalchemy import func as sqlfunc
@@ -121,6 +122,7 @@ async def create_trip(
 
     trip = Trip(
         trip_number=max_num + 1,
+        name=body.name,
         driver_id=body.driver_id,
         vehicle_id=body.vehicle_id,
         qr_token=secrets.token_hex(32),
@@ -172,6 +174,8 @@ async def update_trip(
     if trip.status != "geplant":
         raise HTTPException(status_code=409, detail="Fahrt kann nur im Status 'geplant' bearbeitet werden")
 
+    if body.name is not None:
+        trip.name = body.name
     if body.driver_id is not None:
         trip.driver_id = body.driver_id
     if body.vehicle_id is not None:
