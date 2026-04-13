@@ -45,47 +45,70 @@
           </div>
         </section>
 
-        <!-- Aufträge -->
+        <!-- Aufträge (Drag & Drop) -->
         <section class="section">
           <h4>Aufträge</h4>
+          <div class="orders-layout">
 
-          <!-- Ausgewählte Aufträge (sortierbar) -->
-          <div v-if="form.order_ids.length > 0" class="selected-orders">
-            <div v-for="(orderId, idx) in form.order_ids" :key="orderId" class="selected-order">
-              <div class="reorder-btns">
-                <button type="button" :disabled="idx === 0" @click="moveOrder(idx, -1)">▲</button>
-                <button type="button" :disabled="idx === form.order_ids.length - 1" @click="moveOrder(idx, 1)">▼</button>
-              </div>
-              <span class="order-num">{{ idx + 1 }}</span>
-              <span class="order-check__label">
-                <strong>{{ getOrder(orderId)?.destination }}</strong>
-                <small>{{ formatTime(getOrder(orderId)?.deadline) }} · {{ getOrder(orderId)?.trip_type }}</small>
-                <small v-if="getOrder(orderId)?.patient_name">
-                  👤 {{ getOrder(orderId).patient_name }}<span v-if="getOrder(orderId).companion"> +1</span>
-                </small>
-              </span>
-              <button type="button" class="btn-icon btn-remove" title="Entfernen" @click="removeOrder(orderId)">✕</button>
+            <!-- Ausgewählte Aufträge (sortierbar per D&D) -->
+            <div class="orders-col">
+              <p class="orders-col__label">Reihenfolge in der Fahrt</p>
+              <VueDraggable
+                v-model="selectedOrderObjects"
+                :animation="150"
+                :group="{ name: 'fahrt-orders' }"
+                handle=".drag-handle"
+                class="drop-zone drop-zone--selected"
+              >
+                <div
+                  v-for="(o, idx) in selectedOrderObjects"
+                  :key="o.id"
+                  class="order-item order-item--selected"
+                >
+                  <span class="drag-handle" title="Ziehen zum Sortieren oder Entfernen">⠿</span>
+                  <span class="order-num">{{ idx + 1 }}</span>
+                  <span class="order-item__label">
+                    <strong>{{ o.destination }}</strong>
+                    <small>{{ formatTime(o.deadline) }} · {{ o.trip_type }}</small>
+                    <small v-if="o.patient_name">👤 {{ o.patient_name }}<span v-if="o.companion"> +1</span></small>
+                  </span>
+                </div>
+                <p v-if="selectedOrderObjects.length === 0" class="drop-hint">
+                  Aufträge von rechts hierher ziehen
+                </p>
+              </VueDraggable>
             </div>
-          </div>
 
-          <!-- Verfügbare Aufträge zum Hinzufügen -->
-          <div v-if="availableOrders.length > 0" class="available-orders">
-            <p class="available-label">Hinzufügen:</p>
-            <div
-              v-for="o in availableOrders"
-              :key="o.id"
-              class="available-order"
-              @click="addOrder(o.id)"
-            >
-              <span class="available-order__plus">+</span>
-              <span class="order-check__label">
-                <strong>{{ o.destination }}</strong>
-                <small>{{ formatTime(o.deadline) }} · {{ o.trip_type }}</small>
-                <small v-if="o.patient_name">👤 {{ o.patient_name }}<span v-if="o.companion"> +1</span></small>
-              </span>
+            <!-- Verfügbare Aufträge -->
+            <div class="orders-col">
+              <p class="orders-col__label">Verfügbare Aufträge</p>
+              <VueDraggable
+                v-model="availableOrderObjects"
+                :animation="150"
+                :group="{ name: 'fahrt-orders' }"
+                handle=".drag-handle"
+                :sort="false"
+                class="drop-zone"
+              >
+                <div
+                  v-for="o in availableOrderObjects"
+                  :key="o.id"
+                  class="order-item"
+                >
+                  <span class="drag-handle" title="In Fahrt ziehen">⠿</span>
+                  <span class="order-item__label">
+                    <strong>{{ o.destination }}</strong>
+                    <small>{{ formatTime(o.deadline) }} · {{ o.trip_type }}</small>
+                    <small v-if="o.patient_name">👤 {{ o.patient_name }}<span v-if="o.companion"> +1</span></small>
+                  </span>
+                </div>
+                <p v-if="availableOrderObjects.length === 0" class="drop-hint drop-hint--muted">
+                  Keine weiteren Aufträge
+                </p>
+              </VueDraggable>
             </div>
+
           </div>
-          <p v-if="selectableOrders.length === 0" style="color:#aaa;font-size:13px">Keine offenen Aufträge</p>
         </section>
 
         <!-- Kapazität (nur wenn Fahrzeug gewählt) -->
@@ -123,7 +146,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { VueDraggable } from 'vue-draggable-plus'
 import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
 import { api } from '@/api/client'
@@ -131,11 +155,12 @@ import { api } from '@/api/client'
 const props = defineProps({ trip: Object, openOrders: Array, preSelectedOrderId: String })
 const emit = defineEmits(['saved', 'close'])
 
+// Alle wählbaren Aufträge: bestehende Aufträge der Fahrt + offene Aufträge
 const selectableOrders = computed(() => {
-  if (!props.trip) return props.openOrders
+  if (!props.trip) return props.openOrders ?? []
   const tripOrderIds = new Set(props.trip.orders.map((to) => to.order.id))
   const tripOrders = props.trip.orders.map((to) => to.order)
-  const additionalOpen = props.openOrders.filter((o) => !tripOrderIds.has(o.id))
+  const additionalOpen = (props.openOrders ?? []).filter((o) => !tripOrderIds.has(o.id))
   return [...tripOrders, ...additionalOpen]
 })
 
@@ -145,51 +170,39 @@ const users = ref([])
 const saving = ref(false)
 const error = ref(null)
 
-const initialOrderIds = props.trip?.orders.map((to) => to.order.id) ?? []
-if (props.preSelectedOrderId && !initialOrderIds.includes(props.preSelectedOrderId)) {
-  initialOrderIds.push(props.preSelectedOrderId)
-}
-
 const form = reactive({
   name: props.trip?.name ?? '',
   driver_id: props.trip?.driver?.id ?? null,
   vehicle_id: props.trip?.vehicle?.id ?? null,
-  order_ids: initialOrderIds,
   notes: props.trip?.notes ?? '',
 })
 
-const selectedOrders = computed(() =>
-  selectableOrders.value.filter((o) => form.order_ids.includes(o.id))
+// Ausgewählte Aufträge als Objekte (Reihenfolge = sort_order)
+const initialSelectedIds = props.trip
+  ? [...props.trip.orders]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((to) => to.order.id)
+  : []
+if (props.preSelectedOrderId && !initialSelectedIds.includes(props.preSelectedOrderId)) {
+  initialSelectedIds.push(props.preSelectedOrderId)
+}
+
+const selectedOrderObjects = ref(
+  initialSelectedIds
+    .map((id) => selectableOrders.value.find((o) => o.id === id))
+    .filter(Boolean)
 )
 
-const availableOrders = computed(() =>
-  selectableOrders.value.filter((o) => !form.order_ids.includes(o.id))
+const availableOrderObjects = ref(
+  selectableOrders.value.filter(
+    (o) => !initialSelectedIds.includes(o.id)
+  )
 )
 
-function getOrder(orderId) {
-  return selectableOrders.value.find((o) => o.id === orderId)
-}
-
-function addOrder(orderId) {
-  if (!form.order_ids.includes(orderId)) form.order_ids.push(orderId)
-}
-
-function removeOrder(orderId) {
-  const idx = form.order_ids.indexOf(orderId)
-  if (idx !== -1) form.order_ids.splice(idx, 1)
-}
-
-function moveOrder(idx, delta) {
-  const newIdx = idx + delta
-  if (newIdx < 0 || newIdx >= form.order_ids.length) return
-  const arr = [...form.order_ids]
-  ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
-  form.order_ids.splice(0, form.order_ids.length, ...arr)
-}
-
+// Kapazitätsberechnung basiert auf ausgewählten Aufträgen
 const usedSeats = computed(() => {
   let seats = 1
-  for (const o of selectedOrders.value) {
+  for (const o of selectedOrderObjects.value) {
     if (o.patient_name) {
       seats += 1
       if (o.companion) seats += 1
@@ -205,7 +218,7 @@ const selectedVehicleSeats = computed(() => selectedVehicle.value?.seats ?? '?')
 const seatRatio = computed(() =>
   selectedVehicle.value ? usedSeats.value / selectedVehicle.value.seats : 0
 )
-const canSave = computed(() => form.order_ids.length > 0)
+const canSave = computed(() => selectedOrderObjects.value.length > 0)
 
 async function submit() {
   saving.value = true
@@ -215,7 +228,7 @@ async function submit() {
       name: form.name || null,
       driver_id: form.driver_id,
       vehicle_id: form.vehicle_id,
-      order_ids: form.order_ids,
+      order_ids: selectedOrderObjects.value.map((o) => o.id),
       notes: form.notes || null,
     }
     if (props.trip) {
@@ -232,6 +245,7 @@ async function submit() {
 }
 
 function formatTime(iso) {
+  if (!iso) return ''
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 
@@ -245,7 +259,7 @@ onMounted(async () => {
 
 <style scoped>
 .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100; }
-.modal { background:#fff;border-radius:10px;width:560px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.2); }
+.modal { background:#fff;border-radius:10px;width:700px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.2); }
 .modal__header { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eee; }
 .modal__body { padding:20px;overflow-y:auto;flex:1; }
 .modal__footer { display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid #eee; }
@@ -263,38 +277,43 @@ onMounted(async () => {
 .select-card.selected { border-color:#1565c0;background:#e3f2fd; }
 .select-card small { font-size:11px;color:#888; }
 
-.order-check__label { display:flex;flex-direction:column;gap:2px;flex:1; }
-.order-check__label small { color:#888;font-size:11px; }
+/* Auftrags-Layout */
+.orders-layout { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.orders-col__label { font-size:11px;color:#888;margin-bottom:6px;font-weight:500; }
 
-.selected-orders { display:flex;flex-direction:column;gap:4px;margin-bottom:10px; }
-.selected-order {
-  display:flex;align-items:center;gap:8px;
-  padding:8px;border-radius:6px;border:1px solid #1565c0;background:#f0f7ff;
+.drop-zone {
+  min-height:100px;border-radius:6px;border:1px dashed #ddd;
+  padding:6px;display:flex;flex-direction:column;gap:4px;
 }
-.reorder-btns { display:flex;flex-direction:column;gap:2px; }
-.reorder-btns button {
-  padding:0 4px;font-size:10px;line-height:1.4;border:1px solid #ccc;
-  border-radius:3px;background:#fff;color:#555;cursor:pointer;
+.drop-zone--selected { border-color:#c5d9f1;background:#fafcff; }
+
+.order-item {
+  display:flex;align-items:flex-start;gap:8px;
+  padding:7px 8px;border-radius:5px;
+  background:#fff;border:1px solid #eee;
+  user-select:none;
 }
-.reorder-btns button:disabled { opacity:0.3;cursor:default; }
+.order-item--selected { background:#f0f7ff;border-color:#c5d9f1; }
+
+.drag-handle {
+  cursor:grab;color:#ccc;font-size:15px;flex-shrink:0;padding-top:1px;
+  line-height:1;
+}
+.drag-handle:hover { color:#888; }
+.drag-handle:active { cursor:grabbing; }
+
 .order-num {
   width:20px;height:20px;border-radius:50%;background:#1565c0;color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px;
 }
-.btn-remove {
-  padding:2px 6px;font-size:12px;border-radius:4px;border:none;
-  background:transparent;color:#aaa;cursor:pointer;flex-shrink:0;
-}
-.btn-remove:hover { color:#c62828; }
 
-.available-label { font-size:11px;color:#aaa;margin-bottom:4px; }
-.available-orders { display:flex;flex-direction:column;gap:4px; }
-.available-order {
-  display:flex;align-items:center;gap:8px;
-  padding:8px;border-radius:6px;border:1px dashed #ddd;cursor:pointer;
-}
-.available-order:hover { border-color:#1565c0;background:#f8faff; }
-.available-order__plus { font-size:16px;color:#1565c0;font-weight:600;flex-shrink:0;width:20px;text-align:center; }
+.order-item__label { display:flex;flex-direction:column;gap:2px;flex:1;min-width:0; }
+.order-item__label strong { font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.order-item__label small { color:#888;font-size:11px; }
+
+.drop-hint { font-size:12px;color:#bbb;text-align:center;padding:20px 8px;margin:0; }
+.drop-hint--muted { color:#ddd; }
 
 .kapazitaet { display:flex;align-items:center;gap:10px;margin-bottom:6px; }
 .kapazitaet__bar { flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden; }
