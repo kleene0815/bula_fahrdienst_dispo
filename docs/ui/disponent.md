@@ -20,7 +20,8 @@ Die Hauptansicht ist zweigeteilt:
 - Jede Fahrt zeigt: Fahrtnummer, Fahrername, Status-Badge, enthaltene Stopps mit Reihenfolge
 - Nicht abgeschlossene Fahrten zeigen Kapazitätsindikator (belegte / verfügbare Sitze)
 - Button „+ Neue Fahrt" öffnet das Fahrtformular
-- Aufträge können per Drag-and-drop oder Button einer Fahrt hinzugefügt werden
+- Aufträge können per Drag-and-drop einer bestehenden Fahrt oder einer neuen Fahrt (eigene Ablagezone am Ende der Spalte) hinzugefügt werden
+- Eine Auftragskarte wird auf eine Fahrtkarte oder die „+ Neue Fahrt"-Zone gezogen; der Auftrag wird der Fahrt hinzugefügt bzw. eine neue Fahrt geöffnet
 
 **Topbar:**
 - Tagesübersicht: Anzahl offener, unterwegs befindlicher und erledigter Aufträge
@@ -38,8 +39,8 @@ Felder:
 | Auftragstyp | Auswahl (Besorgung / Hinfahrt / Abholung) | Ja |
 | Name / Adresse des Ziels | Freitext | Ja |
 | Adresse des Ziels | Freitext | Nein |
-| Deadline / Termin | Datum + Uhrzeit | Ja |
-| Priorität | Auswahl (Normal / Mittel / Hoch) | Ja |
+| Deadline / Termin | Schnellauswahl (Heute / Morgen / Datum wählen) + separates Uhrzeitfeld | Ja |
+| Priorität | Auswahl (Gering / Normal / Hoch) | Ja |
 | Patientenname | Freitext | Nein |
 | Telefonnummer | Freitext | Nein |
 | Begleitperson mitfährt | Toggle (ja/nein) | Nein |
@@ -55,7 +56,7 @@ Das Fahrtformular erlaubt die manuelle Zusammenstellung einer Fahrt.
 **Abschnitte:**
 1. **Fahrer** — Auswahl per Karte. Verfügbare Fahrer sind hervorgehoben, Fahrer im Einsatz grau markiert (aber wählbar).
 2. **Fahrzeug** — Auswahl per Karte. Zeigt Name, Kennzeichen, Sitzanzahl und Typ (fest/privat).
-3. **Aufträge** — Checkboxliste aller offenen Aufträge. Zeigt Ziel, Typ, Deadline und Patienteninfo.
+3. **Aufträge** — Checkboxliste aller offenen Aufträge sowie der bereits der Fahrt zugewiesenen Aufträge (beim Bearbeiten). Zeigt Ziel, Typ, Deadline und Patienteninfo.
 4. **Kapazitätsanzeige** — Balken mit belegten / verfügbaren Sitzen. Wird gelb bei hoher Auslastung, rot bei Überschreitung. Der Speichern-Button ist bei Überschreitung deaktiviert.
 5. **Bemerkungen** — Freitext für Fahrerhinweise.
 

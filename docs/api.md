@@ -41,6 +41,8 @@ Gibt den aktuell angemeldeten Benutzer zurück. Wird beim App-Start aufgerufen, 
 ### `GET /api/v1/users`
 Liste aller Benutzer mit Rolle `fahrer`. Wird im Fahrtformular für die Fahrerauswahl benötigt.
 
+Vor der Rückgabe werden Nutzer mit den Rollen `fahrer` oder `disponent` über die Keycloak Admin API abgerufen und in der lokalen DB synchronisiert — damit stehen Fahrer bereits vor ihrem ersten Login zur Auswahl.
+
 **Berechtigung:** D
 
 **Response:**
@@ -82,7 +84,7 @@ Neuen Auftrag anlegen.
   "destination": "Dr. Müller",
   "destination_address": "Hauptstraße 1, 12345 Musterstadt",
   "deadline": "2026-07-15T10:00:00Z",
-  "priority": "normal",
+  "priority": "normal",  // gering | normal | hoch
   "patient_name": "Anna Schmidt",
   "phone": "0721 123456",
   "companion": false,
@@ -131,7 +133,7 @@ Auftrag stornieren. Setzt `status → storniert`. Entfernt den Auftrag ggf. aus 
 {
   "id": "uuid",
   "status": "offen",
-  "priority": "normal",
+  "priority": "normal",  // gering | normal | hoch
   "trip_type": "hinfahrt",
   "destination": "Dr. Müller",
   "destination_address": "Hauptstraße 1",
@@ -366,7 +368,8 @@ Globale App-Konfiguration abrufen.
   "security_center_name": "Sicherheitszentrale Zeltlager",
   "security_center_phone": "0721 / 555 100",
   "organizer_name": "DLRG Ortsgruppe Muster",
-  "camp_address": "Festwiese Nord, Musterstadt"
+  "camp_address": "Festwiese Nord, Musterstadt",
+  "default_deadline_time": "10:00"
 }
 ```
 
@@ -377,7 +380,7 @@ Globale App-Konfiguration speichern (überschreibt alle Felder).
 
 **Berechtigung:** D
 
-**Request Body:** Alle vier Felder aus GET (alle Pflicht).
+**Request Body:** Alle fünf Felder aus GET (alle Pflicht).
 
 **Response:** `200` + aktualisierte Konfiguration.
 

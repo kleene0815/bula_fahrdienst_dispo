@@ -15,6 +15,7 @@ Nur Nutzer mit der Rolle `disponent` haben Zugriff auf die Einstellungsseite.
 | Telefonnummer der Sicherheitszentrale | z.B. „0721 / 555 100" | Patientenabschnitt auf Auftragsschein |
 | Name des Veranstalters | z.B. „DLRG Ortsgruppe Muster" | Patientenabschnitt auf Auftragsschein |
 | Adresse des Lagerplatzes | z.B. „Festwiese Nord, Musterstadt" | Patientenabschnitt auf Auftragsschein |
+| Standard-Deadline-Uhrzeit | z.B. `10:00` | Vorausgefüllte Uhrzeit beim Anlegen neuer Aufträge |
 
 
 ## Fahrzeugverwaltung

@@ -31,7 +31,7 @@ docker compose up --build
 |---|---|
 | Frontend | http://localhost:5173 |
 | Backend API + Docs | http://localhost:8000/docs |
-| Keycloak Admin | http://localhost:8080 (admin / admin) |
+| Keycloak Admin | http://localhost:8088 (admin / admin) |
 
 Die Datenbank-Migrationen werden beim Backend-Start automatisch ausgeführt.
 
@@ -63,10 +63,23 @@ docker compose down -v && docker compose up --build
 
 ## Status
 
-Konzeptionsphase abgeschlossen. Nächste Schritte:
+Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Offene Punkte aus dem ersten Testlauf:
+
+### Abgeschlossen
 
 - [x] API-Endpunkte definieren
 - [x] Technologie-Entscheidung Backend
 - [x] Datenbankschema als SQL-Migration
-- [x] Implementierung
+- [x] Implementierung (Backend + Frontend)
 - [x] Docker-Compose Entwicklungsumgebung
+- [x] Korrekte initiale Routenweiterleitung (Disponent → Desktop-Ansicht, Fahrer → Mobile-Ansicht)
+
+### Offen (nächste Iteration)
+
+- [ ] **Doppelte Darstellung** von Aufträgen/Fahrten nach dem Anlegen beheben (Deduplizierung zwischen lokalem Push und SSE-Event)
+- [ ] **Deadline-UX verbessern:** Datumsauswahl als Schnellauswahl (Heute / Morgen / Datum wählen) + separates Uhrzeitfeld mit konfigurierbarem Standardwert
+- [ ] **Standard-Deadline-Uhrzeit** in den App-Einstellungen konfigurierbar machen
+- [ ] **Prioritäten umbenennen:** `mittel` → `gering` (Migration liegt vor, Frontend + Modell ausstehend)
+- [ ] **Fahrtformular (Bearbeitung):** bereits zugeteilte Aufträge der Fahrt im Auftragsfeld anzeigen
+- [ ] **Drag & Drop:** Auftragskarten auf Fahrtkarten ziehen; Neue-Fahrt-Ablagezone in der Fahrten-Spalte
+- [ ] **Fahrer-Sync aus Keycloak:** Fahrer werden vor dem ersten Login via Keycloak Admin API synchronisiert

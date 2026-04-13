@@ -68,7 +68,7 @@ Einzelner Auftrag. Wird ausschließlich vom Disponenten angelegt.
 |---|---|---|
 | `id` | `uuid` PK | |
 | `status` | `text` | Enum: `offen`, `zugeteilt`, `unterwegs`, `erledigt`, `storniert` |
-| `priority` | `text` | Enum: `normal`, `mittel`, `hoch` |
+| `priority` | `text` | Enum: `gering`, `normal`, `hoch` |
 | `trip_type` | `text` | Enum: `besorgung`, `hinfahrt`, `abholung` |
 | `destination` | `text` | Name des Ziels, z.B. „Apotheke am Markt" |
 | `destination_address` | `text` | Adresse des Ziels (Freitext, für Auftragsschein) |
@@ -159,4 +159,5 @@ Globale Konfigurationswerte der App. Enthält genau eine Zeile.
 | `security_center_phone` | `text` | Telefonnummer der Sicherheitszentrale |
 | `organizer_name` | `text` | Name des Veranstalters |
 | `camp_address` | `text` | Adresse des Lagerplatzes |
+| `default_deadline_time` | `text` | Standard-Uhrzeit für neue Aufträge, z.B. `10:00` |
 | `updated_at` | `timestamptz` | |
