@@ -24,7 +24,7 @@ RETRY_INTERVAL = 2
 def _wait_for_keycloak(client: httpx.Client) -> bool:
     for _ in range(MAX_RETRIES):
         try:
-            resp = client.get(f"{KEYCLOAK_URL}/health/ready", timeout=3.0)
+            resp = client.get(f"{KEYCLOAK_URL}/realms/{REALM}", timeout=3.0)
             if resp.status_code == 200:
                 return True
         except httpx.RequestError:
@@ -69,7 +69,7 @@ def main() -> None:
     with httpx.Client(timeout=10.0) as client:
         print("Keycloak-Init: Warte auf Keycloak…")
         if not _wait_for_keycloak(client):
-            print("Keycloak-Init: Keycloak nicht erreichbar – übersprungen.", file=sys.stderr)
+            print("Keycloak-Init: Keycloak nicht erreichbar — übersprungen.", file=sys.stderr)
             return
 
         token = _admin_token(client)
@@ -89,16 +89,18 @@ def main() -> None:
             return
         rm_client_id = rm_clients[0]["id"]
 
-        # Prüfen ob Rolle bereits zugewiesen (Idempotenz)
+        # Prüfen welche Rollen bereits zugewiesen sind (Idempotenz)
         existing = _get(client, token, f"/users/{sa_user_id}/role-mappings/clients/{rm_client_id}")
-        if any(r["name"] == "view-users" for r in existing):
-            print("Keycloak-Init: 'view-users' bereits zugewiesen – nichts zu tun.")
+        existing_names = {r["name"] for r in existing}
+        needed = {"view-users", "query-users", "view-realm"} - existing_names
+        if not needed:
+            print("Keycloak-Init: Rollen bereits zugewiesen – nichts zu tun.")
             return
 
-        # view-users Rolle holen und zuweisen
-        view_users_role = _get(client, token, f"/clients/{rm_client_id}/roles/view-users")
-        _post(client, token, f"/users/{sa_user_id}/role-mappings/clients/{rm_client_id}", [view_users_role])
-        print(f"Keycloak-Init: 'view-users' erfolgreich zugewiesen an '{sa_username}'.")
+        # Fehlende Rollen holen und zuweisen
+        roles_to_add = [_get(client, token, f"/clients/{rm_client_id}/roles/{role}") for role in needed]
+        _post(client, token, f"/users/{sa_user_id}/role-mappings/clients/{rm_client_id}", roles_to_add)
+        print(f"Keycloak-Init: {needed} erfolgreich zugewiesen an '{sa_username}'.")
 
 
 if __name__ == "__main__":

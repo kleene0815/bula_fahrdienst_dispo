@@ -68,7 +68,9 @@ Unter **Clients → Create**:
 | Standard flow | **Aus** |
 | Service account roles | **Ein** |
 
-Nach dem Speichern das **Client Secret** unter **Credentials** kopieren — wird als `KEYCLOAK_SERVICE_CLIENT_SECRET` benötigt.
+Nach dem Speichern:
+- Das **Client Secret** unter **Credentials** kopieren — wird als `KEYCLOAK_SERVICE_CLIENT_SECRET` benötigt.
+- Unter **Settings** die Option **Full scope allowed** aktivieren. Dadurch erscheinen zugewiesene Client-Rollen anderer Clients (hier `realm-management/view-users`) im ausgestellten Token — ohne diese Einstellung liefert die Admin API 403, obwohl die Rolle zugewiesen ist.
 
 ### Berechtigung vergeben
 
@@ -76,7 +78,7 @@ Der Service Account benötigt nur das Recht, Nutzer abzufragen (`view-users`). K
 
 1. **Clients → `fahrdienst-backend` → Service accounts roles**
 2. **Assign role** → Filter auf „Filter by clients" umstellen
-3. Client **`realm-management`** auswählen → Rolle **`view-users`** zuweisen
+3. Client **`realm-management`** auswählen → Rollen **`view-users`**, **`query-users`** und **`view-realm`** zuweisen
 
 ---
 
