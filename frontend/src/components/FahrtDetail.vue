@@ -3,7 +3,7 @@
     <!-- Kopf -->
     <div class="detail-header">
       <div>
-        <h2>Fahrt #{{ trip.trip_number }}</h2>
+        <h2>{{ trip.name || 'Fahrt #' + trip.trip_number }}</h2>
         <span :class="`badge badge--${trip.status}`">{{ trip.status }}</span>
       </div>
       <div class="detail-header__vehicle">

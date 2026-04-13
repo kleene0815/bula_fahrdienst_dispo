@@ -57,7 +57,6 @@
                 v-model="selectedOrderObjects"
                 :animation="150"
                 :group="{ name: 'fahrt-orders' }"
-                handle=".drag-handle"
                 class="drop-zone drop-zone--selected"
               >
                 <div
@@ -65,7 +64,6 @@
                   :key="o.id"
                   class="order-item order-item--selected"
                 >
-                  <span class="drag-handle" title="Ziehen zum Sortieren oder Entfernen">⠿</span>
                   <span class="order-num">{{ idx + 1 }}</span>
                   <span class="order-item__label">
                     <strong>{{ o.destination }}</strong>
@@ -86,7 +84,6 @@
                 v-model="availableOrderObjects"
                 :animation="150"
                 :group="{ name: 'fahrt-orders' }"
-                handle=".drag-handle"
                 :sort="false"
                 class="drop-zone"
               >
@@ -95,7 +92,6 @@
                   :key="o.id"
                   class="order-item"
                 >
-                  <span class="drag-handle" title="In Fahrt ziehen">⠿</span>
                   <span class="order-item__label">
                     <strong>{{ o.destination }}</strong>
                     <small>{{ formatTime(o.deadline) }} · {{ o.trip_type }}</small>
@@ -291,16 +287,10 @@ onMounted(async () => {
   display:flex;align-items:flex-start;gap:8px;
   padding:7px 8px;border-radius:5px;
   background:#fff;border:1px solid #eee;
-  user-select:none;
+  user-select:none;cursor:grab;
 }
+.order-item:active { cursor:grabbing; }
 .order-item--selected { background:#f0f7ff;border-color:#c5d9f1; }
-
-.drag-handle {
-  cursor:grab;color:#ccc;font-size:15px;flex-shrink:0;padding-top:1px;
-  line-height:1;
-}
-.drag-handle:hover { color:#888; }
-.drag-handle:active { cursor:grabbing; }
 
 .order-num {
   width:20px;height:20px;border-radius:50%;background:#1565c0;color:#fff;
