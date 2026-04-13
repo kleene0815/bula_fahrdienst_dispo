@@ -39,6 +39,7 @@ async def create_order(
 ):
     order = Order(**body.model_dump(), created_by=current_user.id)
     db.add(order)
+    await db.flush()  # UUID zuweisen lassen, bevor StatusLog sie referenziert
     db.add(StatusLog(
         entity_type="order",
         entity_id=order.id,
