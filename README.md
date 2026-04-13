@@ -77,8 +77,8 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 ### Offen (nächste Iteration)
 
 - [x] **Doppelte Darstellung** von Aufträgen/Fahrten nach dem Anlegen beheben (Deduplizierung zwischen lokalem Push und SSE-Event)
-- [ ] **Deadline-UX verbessern:** Datumsauswahl als Schnellauswahl (Heute / Morgen / Datum wählen) + separates Uhrzeitfeld mit konfigurierbarem Standardwert
-- [ ] **Standard-Deadline-Uhrzeit** in den App-Einstellungen konfigurierbar machen
+- [x] **Deadline-UX verbessern:** Datumsauswahl als Schnellauswahl (Heute / Morgen / Datum wählen) + separates Uhrzeitfeld mit konfigurierbarem Standardwert
+- [x] **Standard-Deadline-Uhrzeit** in den App-Einstellungen konfigurierbar machen
 - [ ] **Prioritäten umbenennen:** `mittel` → `gering` (Migration liegt vor, Frontend + Modell ausstehend)
 - [x] **Fahrtformular (Bearbeitung):** bereits zugeteilte Aufträge der Fahrt im Auftragsfeld anzeigen
 - [ ] **Drag & Drop:** Auftragskarten auf Fahrtkarten ziehen; Neue-Fahrt-Ablagezone in der Fahrten-Spalte

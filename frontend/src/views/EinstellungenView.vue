@@ -27,6 +27,10 @@
             <label>Adresse des Lagerplatzes</label>
             <input v-model="config.camp_address" type="text" />
           </div>
+          <div class="field">
+            <label>Standard-Deadline-Uhrzeit</label>
+            <input v-model="config.default_deadline_time" type="time" />
+          </div>
           <p v-if="configSaved" class="success">Gespeichert ✓</p>
           <button type="submit" class="btn-primary" :disabled="configSaving">
             {{ configSaving ? 'Wird gespeichert…' : 'Speichern' }}
@@ -127,6 +131,7 @@ const config = reactive({
   security_center_phone: '',
   organizer_name: '',
   camp_address: '',
+  default_deadline_time: '17:00',
 })
 
 const vehicleForm = reactive({ name: '', license_plate: '', seats: 8, type: 'fest' })

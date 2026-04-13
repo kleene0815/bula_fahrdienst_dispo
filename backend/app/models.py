@@ -121,4 +121,5 @@ class AppConfig(Base):
     security_center_phone: Mapped[str] = mapped_column(Text, nullable=False, default="")
     organizer_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
     camp_address: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    default_deadline_time: Mapped[str] = mapped_column(Text, nullable=False, default="17:00")
     updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())

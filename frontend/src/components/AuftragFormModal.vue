@@ -37,7 +37,38 @@
         </div>
         <div class="field">
           <label>Deadline / Termin *</label>
-          <input v-model="form.deadline" type="datetime-local" required />
+          <div class="deadline-row">
+            <div class="deadline-date-btns">
+              <button
+                type="button"
+                :class="['btn-date', deadlineDateMode === 'heute' && 'btn-date--active']"
+                @click="deadlineDateMode = 'heute'"
+              >Heute</button>
+              <button
+                type="button"
+                :class="['btn-date', deadlineDateMode === 'morgen' && 'btn-date--active']"
+                @click="deadlineDateMode = 'morgen'"
+              >Morgen</button>
+              <button
+                type="button"
+                :class="['btn-date', deadlineDateMode === 'datum' && 'btn-date--active']"
+                @click="deadlineDateMode = 'datum'"
+              >Datum wählen</button>
+            </div>
+            <input
+              v-if="deadlineDateMode === 'datum'"
+              v-model="deadlineDate"
+              type="date"
+              required
+              class="deadline-date-input"
+            />
+            <input
+              v-model="deadlineTime"
+              type="time"
+              required
+              class="deadline-time-input"
+            />
+          </div>
         </div>
         <div class="field">
           <label>Priorität *</label>
@@ -84,8 +115,9 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, watch, onMounted } from 'vue'
 import { useOrdersStore } from '@/stores/orders'
+import { api } from '@/api/client'
 
 const props = defineProps({ order: Object })
 const emit = defineEmits(['saved', 'close'])
@@ -93,12 +125,15 @@ const ordersStore = useOrdersStore()
 const saving = ref(false)
 const error = ref(null)
 
+const deadlineDateMode = ref('heute')
+const deadlineDate = ref(today())
+const deadlineTime = ref('17:00')
+
 const form = reactive({
   trip_type: 'besorgung',
   destination_type: 'apotheke',
   destination: '',
   destination_address: '',
-  deadline: '',
   priority: 'normal',
   patient_name: '',
   phone: '',
@@ -107,28 +142,55 @@ const form = reactive({
   requester_station: '',
 })
 
+function today() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+}
+
+function tomorrow() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+}
+
+function resolvedDeadlineDate() {
+  if (deadlineDateMode.value === 'heute') return today()
+  if (deadlineDateMode.value === 'morgen') return tomorrow()
+  return deadlineDate.value
+}
+
 // Beim Bearbeiten: Formular vorausfüllen
 watch(() => props.order, (o) => {
   if (!o) return
-  Object.assign(form, {
-    ...o,
-    deadline: toLocalDatetime(o.deadline),
-  })
+  const d = new Date(o.deadline)
+  const pad = (n) => String(n).padStart(2, '0')
+  deadlineDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+  deadlineTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  deadlineDateMode.value = 'datum'
+  Object.assign(form, { ...o })
 }, { immediate: true })
 
-function toLocalDatetime(iso) {
-  const d = new Date(iso)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+onMounted(async () => {
+  if (!props.order) {
+    try {
+      const cfg = await api.get('/config')
+      deadlineTime.value = cfg.default_deadline_time ?? '17:00'
+    } catch {
+      // Fallback bleibt 17:00
+    }
+  }
+})
 
 async function submit() {
   saving.value = true
   error.value = null
   try {
+    const deadline = new Date(`${resolvedDeadlineDate()}T${deadlineTime.value}:00`).toISOString()
     const payload = {
       ...form,
-      deadline: new Date(form.deadline).toISOString(),
+      deadline,
       patient_name: form.trip_type === 'besorgung' ? null : (form.patient_name || null),
       phone: form.phone || null,
       destination_address: form.destination_address || null,
@@ -177,4 +239,20 @@ async function submit() {
 .field--toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .field--toggle input { width: auto; }
 .error { color: #c62828; font-size: 13px; margin-bottom: 10px; }
+.deadline-row { display: flex; flex-direction: column; gap: 8px; }
+.deadline-date-btns { display: flex; gap: 6px; }
+.btn-date {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+}
+.btn-date:hover { border-color: #1565c0; color: #1565c0; }
+.btn-date--active { border-color: #1565c0; background: #e3f0ff; color: #1565c0; font-weight: 600; }
+.deadline-date-input { width: 100%; }
+.deadline-time-input { width: 100%; }
 </style>
