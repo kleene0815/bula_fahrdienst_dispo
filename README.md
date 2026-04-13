@@ -80,8 +80,6 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Fahrtformular (Bearbeitung): bereits zugeteilte Aufträge der Fahrt im Auftragsfeld anzeigen
 - [x] Drag & Drop: Auftragskarten auf Fahrtkarten ziehen; Neue-Fahrt-Ablagezone in der Fahrten-Spalte
 - [x] Fahrer-Sync aus Keycloak: Fahrer werden vor dem ersten Login via Keycloak Admin API synchronisiert
-
-### Offene Änderungswünsche
 - [x] In der Auftragsübersicht soll der Typ des Auftrags (Besorgung, Abholung, Hinfahrt) angezeigt werden, stattdessen muss die AuftragsID nicht angezeigt werden.
 - [x] Auftragsübersicht: Buttons für Bearbeiten und Stornieren sind zu präsent. Besser durch Icons ersetzen. Der Bearbeiten-Button sollte mehr auffallen, weil dieser häufiger benutzt wird.
 - [x] Fahrtenübersicht Disponent: Buttons durch Icons ersetzen. Abbrechen sollte weniger präsent sein. 
@@ -92,6 +90,16 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Bei Aufträgen in einer Fahrt soll die Reihenfolge manuell festgelegt werden können.
 - [x] Aufträge, die schon einer Fahrt zugeordnet sind, die noch nicht gestartet ist, sollen per Drag & Drop in eine andere Fahrt verschoben werden können.
 
+### Offene Änderungswünsche 
+- [ ] Auftragsschein abändern:
+  - Überschriftszeile: Auftragsschein - <Name der Fahrt>
+  - Die Felder aus der Konfiguration ersetzen durch eine Box, die z.B. durch ein HTML-Template in der Konfiguration gefüllt werden kann.
+  - Die Fahrtnummer kann entfallen.
+  - Anstatt Termin sollte immer Termin/Deadline stehen.
+  - Die Fahrtnummer auf den Patientenbegleitscheinen können auch entfallen.
+- [ ] Möglichkeit schaffen, schon begonnenen Fahrten neue Aufträge hinzuzufügen. (Fahrer-Ansicht muss dann den neuen Auftrag klar kennzeichnen)
+- [ ] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
+
 ### Bugs
-- [x] Aufträge mit Priorität gering können nicht erstellt werden. "Mittel" soll die Standard-Priorität sein.
-- [x] In Fahrten, die noch nicht gestartet sind, soll man auch Fahrer und Fahrzeug wieder entfernen können.
+- [ ] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.
+- [ ] Benutzer, die sowohl Fahrer als auch Disponent sind, können die Fahrer-Sicht nicht aufrufen.
