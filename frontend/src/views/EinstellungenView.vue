@@ -42,7 +42,7 @@
       <section class="card">
         <div class="card__header">
           <h2>Fahrzeuge</h2>
-          <button class="btn-primary" @click="showVehicleForm = true">+ Neues Fahrzeug</button>
+          <button class="btn-primary" @click="openNewVehicleForm">+ Neues Fahrzeug</button>
         </div>
 
         <table class="vehicle-table">
@@ -72,19 +72,28 @@
                 <button
                   class="btn-ghost"
                   style="font-size:12px;padding:3px 8px;margin-left:4px"
-                  @click="vehiclesStore.update(v.id, { active: !v.active })"
+                  @click="toggleVehicleActive(v)"
                 >{{ v.active ? 'Deaktivieren' : 'Aktivieren' }}</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </section>
+    </div>
+  </div>
 
-        <!-- Fahrzeugformular -->
-        <div v-if="showVehicleForm" class="vehicle-form">
+  <!-- Fahrzeug-Modal -->
+  <Teleport to="body">
+    <div v-if="showVehicleForm" class="modal-backdrop" @click.self="closeVehicleForm">
+      <div class="modal">
+        <div class="modal__header">
           <h3>{{ editingVehicle ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug' }}</h3>
+          <button class="modal__close" @click="closeVehicleForm">✕</button>
+        </div>
+        <div class="modal__body">
           <div class="field">
             <label>Bezeichnung *</label>
-            <input v-model="vehicleForm.name" type="text" required />
+            <input v-model="vehicleForm.name" type="text" required autofocus />
           </div>
           <div class="field">
             <label>Kennzeichen *</label>
@@ -101,14 +110,16 @@
               <option value="privat">Privat</option>
             </select>
           </div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn-ghost" @click="showVehicleForm = false; editingVehicle = null">Abbrechen</button>
-            <button class="btn-primary" @click="saveVehicle">Speichern</button>
-          </div>
         </div>
-      </section>
+        <div class="modal__footer">
+          <button class="btn-ghost" @click="closeVehicleForm">Abbrechen</button>
+          <button class="btn-primary" @click="saveVehicle" :disabled="vehicleSaving">
+            {{ vehicleSaving ? 'Wird gespeichert…' : 'Speichern' }}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -123,6 +134,7 @@ const vehiclesStore = useVehiclesStore()
 const allVehicles = ref([])
 const showVehicleForm = ref(false)
 const editingVehicle = ref(null)
+const vehicleSaving = ref(false)
 const configSaving = ref(false)
 const configSaved = ref(false)
 
@@ -135,6 +147,25 @@ const config = reactive({
 })
 
 const vehicleForm = reactive({ name: '', license_plate: '', seats: 8, type: 'fest' })
+
+function resetVehicleForm() {
+  vehicleForm.name = ''
+  vehicleForm.license_plate = ''
+  vehicleForm.seats = 8
+  vehicleForm.type = 'fest'
+}
+
+function openNewVehicleForm() {
+  editingVehicle.value = null
+  resetVehicleForm()
+  showVehicleForm.value = true
+}
+
+function closeVehicleForm() {
+  showVehicleForm.value = false
+  editingVehicle.value = null
+  resetVehicleForm()
+}
 
 async function saveConfig() {
   configSaving.value = true
@@ -154,15 +185,25 @@ function editVehicle(v) {
   showVehicleForm.value = true
 }
 
+async function toggleVehicleActive(v) {
+  const updated = await vehiclesStore.update(v.id, { active: !v.active })
+  const idx = allVehicles.value.findIndex((x) => x.id === v.id)
+  if (idx >= 0) allVehicles.value[idx] = updated
+}
+
 async function saveVehicle() {
-  if (editingVehicle.value) {
-    await vehiclesStore.update(editingVehicle.value.id, { ...vehicleForm })
-  } else {
-    await vehiclesStore.create({ ...vehicleForm })
+  vehicleSaving.value = true
+  try {
+    if (editingVehicle.value) {
+      await vehiclesStore.update(editingVehicle.value.id, { ...vehicleForm })
+    } else {
+      await vehiclesStore.create({ ...vehicleForm })
+    }
+    closeVehicleForm()
+    await loadVehicles()
+  } finally {
+    vehicleSaving.value = false
   }
-  showVehicleForm.value = false
-  editingVehicle.value = null
-  await loadVehicles()
 }
 
 async function loadVehicles() {
@@ -191,8 +232,68 @@ onMounted(async () => {
 .vehicle-table td { padding:8px 8px;border-bottom:1px solid #f5f5f5; }
 .vehicle-table tr.inactive td { color:#bbb; }
 
-.vehicle-form { margin-top:20px;padding-top:20px;border-top:1px solid #eee; }
-.vehicle-form h3 { font-size:14px;margin-bottom:12px; }
-
 .success { color:#2e7d32;font-size:13px;margin-bottom:10px; }
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal__header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal__close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.modal__close:hover { background: #f0f0f0; color: #333; }
+
+.modal__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid #eee;
+}
 </style>
