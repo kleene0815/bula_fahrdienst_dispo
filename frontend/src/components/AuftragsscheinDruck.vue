@@ -66,22 +66,24 @@
               <span>Fahrt #{{ trip.trip_number }}</span>
             </div>
             <table class="patient-tabelle">
-              <tr>
-                <td><strong>Ziel</strong></td>
-                <td>{{ to.order.destination }}</td>
-              </tr>
-              <tr v-if="to.order.destination_address">
-                <td><strong>Adresse</strong></td>
-                <td>{{ to.order.destination_address }}</td>
-              </tr>
-              <tr>
-                <td><strong>Termin</strong></td>
-                <td>{{ formatDatetime(to.order.deadline) }}</td>
-              </tr>
-              <tr>
-                <td><strong>Patient</strong></td>
-                <td>{{ to.order.patient_name }}<span v-if="to.order.companion"> (+ Begleitperson)</span></td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td><strong>Ziel</strong></td>
+                  <td>{{ to.order.destination }}</td>
+                </tr>
+                <tr v-if="to.order.destination_address">
+                  <td><strong>Adresse</strong></td>
+                  <td>{{ to.order.destination_address }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Termin</strong></td>
+                  <td>{{ formatDatetime(to.order.deadline) }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Patient</strong></td>
+                  <td>{{ to.order.patient_name }}<span v-if="to.order.companion"> (+ Begleitperson)</span></td>
+                </tr>
+              </tbody>
             </table>
             <div class="patientenabschnitt__footer">
               <div>
