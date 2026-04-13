@@ -37,7 +37,12 @@ export const useTripsStore = defineStore('trips', () => {
 
   async function update(id, data) {
     const trip = await api.patch(`/trips/${id}`, data)
-    _replace(trip)
+    const idx = trips.value.findIndex((t) => t.id === trip.id)
+    if (idx >= 0) {
+      trips.value[idx] = trip
+    } else {
+      trips.value.push(trip)
+    }
     return trip
   }
 

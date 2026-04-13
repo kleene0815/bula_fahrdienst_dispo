@@ -36,7 +36,10 @@ def _compute_seats(orders: list[Order]) -> int:
 
 
 async def _load_trip(db: AsyncSession, trip_id: uuid.UUID) -> Trip:
-    result = await db.execute(_trip_query().where(Trip.id == trip_id))
+    result = await db.execute(
+        _trip_query().where(Trip.id == trip_id),
+        execution_options={"populate_existing": True},
+    )
     trip = result.scalar_one_or_none()
     if not trip:
         raise HTTPException(status_code=404, detail="Fahrt nicht gefunden")
@@ -224,6 +227,7 @@ async def update_trip(
     for to in trip.trip_orders:
         await broadcaster.broadcast("order_updated", OrderOut.model_validate(to.order).model_dump())
     for order in freed_orders:
+        await db.refresh(order)
         await broadcaster.broadcast("order_updated", OrderOut.model_validate(order).model_dump())
     return out
 
@@ -327,13 +331,24 @@ async def abort_trip(
     if trip.status not in ("geplant", "aktiv"):
         raise HTTPException(status_code=409, detail="Fahrt kann nicht abgebrochen werden")
 
+    old_trip_status = trip.status
     trip.status = "abgebrochen"
-    db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status=trip.status, new_status="abgebrochen", changed_by=current_user.id))
+    db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status=old_trip_status, new_status="abgebrochen", changed_by=current_user.id))
+
+    for to in trip.trip_orders:
+        if to.order.status != "erledigt":
+            old = to.order.status
+            to.order.status = "offen"
+            db.add(StatusLog(entity_type="order", entity_id=to.order.id, old_status=old, new_status="offen", changed_by=current_user.id))
+
     await db.commit()
 
     trip = await _load_trip(db, trip_id)
     out = TripOut.from_orm_trip(trip)
     await broadcaster.broadcast("trip_updated", out.model_dump())
+    for to in trip.trip_orders:
+        if to.order.status == "offen":
+            await broadcaster.broadcast("order_updated", OrderOut.model_validate(to.order).model_dump())
     return out
 
 
