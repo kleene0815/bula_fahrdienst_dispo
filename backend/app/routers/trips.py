@@ -174,13 +174,14 @@ async def update_trip(
     if trip.status != "geplant":
         raise HTTPException(status_code=409, detail="Fahrt kann nur im Status 'geplant' bearbeitet werden")
 
-    if body.name is not None:
+    fields = body.model_fields_set
+    if 'name' in fields:
         trip.name = body.name
-    if body.driver_id is not None:
+    if 'driver_id' in fields:
         trip.driver_id = body.driver_id
-    if body.vehicle_id is not None:
+    if 'vehicle_id' in fields:
         trip.vehicle_id = body.vehicle_id
-    if body.notes is not None:
+    if 'notes' in fields:
         trip.notes = body.notes
 
     freed_orders: list[Order] = []

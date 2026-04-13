@@ -134,7 +134,7 @@ const form = reactive({
   destination_type: 'apotheke',
   destination: '',
   destination_address: '',
-  priority: 'gering',
+  priority: 'normal',
   patient_name: '',
   phone: '',
   companion: false,
