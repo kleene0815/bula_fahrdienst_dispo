@@ -35,6 +35,24 @@ def _compute_seats(orders: list[Order]) -> int:
     return seats
 
 
+async def _detach_from_other_trip(
+    db: AsyncSession,
+    order: "Order",
+    excluding_trip_id: uuid.UUID | None,
+) -> "uuid.UUID | None":
+    """Löst einen Auftrag aus einer anderen geplanten Fahrt heraus.
+    Gibt die ID der alten Fahrt zurück, oder None wenn keine Verschiebung möglich war."""
+    result = await db.execute(select(TripOrder).where(TripOrder.order_id == order.id))
+    to = result.scalar_one_or_none()
+    if not to or to.trip_id == excluding_trip_id:
+        return None
+    old_trip = await db.get(Trip, to.trip_id)
+    if not old_trip or old_trip.status != "geplant":
+        return None
+    await db.delete(to)
+    return to.trip_id
+
+
 async def _load_trip(db: AsyncSession, trip_id: uuid.UUID) -> Trip:
     result = await db.execute(
         _trip_query().where(Trip.id == trip_id),
@@ -102,8 +120,15 @@ async def create_trip(
     orders = list(orders_result.scalars().all())
     if len(orders) != len(body.order_ids):
         raise HTTPException(status_code=400, detail="Ein oder mehrere Aufträge nicht gefunden")
+
+    relocated_from: set[uuid.UUID] = set()
     for o in orders:
-        if o.status != "offen":
+        if o.status == "zugeteilt":
+            old_trip_id = await _detach_from_other_trip(db, o, None)
+            if old_trip_id is None:
+                raise HTTPException(status_code=409, detail=f"Auftrag {o.id} kann nicht zugeteilt werden (Status: {o.status})")
+            relocated_from.add(old_trip_id)
+        elif o.status != "offen":
             raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen (Status: {o.status})")
 
     # Kapazitätsprüfung (nur wenn Fahrzeug gewählt)
@@ -135,9 +160,9 @@ async def create_trip(
         db.add(TripOrder(trip_id=trip.id, order_id=order_id, sort_order=i + 1))
 
     for o in orders:
-        old = o.status
-        o.status = "zugeteilt"
-        db.add(StatusLog(entity_type="order", entity_id=o.id, old_status=old, new_status="zugeteilt", changed_by=current_user.id))
+        if o.status != "zugeteilt":
+            o.status = "zugeteilt"
+            db.add(StatusLog(entity_type="order", entity_id=o.id, old_status="offen", new_status="zugeteilt", changed_by=current_user.id))
 
     db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status=None, new_status="geplant", changed_by=current_user.id))
     await db.commit()
@@ -147,6 +172,9 @@ async def create_trip(
     await broadcaster.broadcast("trip_created", out.model_dump())
     for to in trip.trip_orders:
         await broadcaster.broadcast("order_updated", OrderOut.model_validate(to.order).model_dump())
+    for old_trip_id in relocated_from:
+        old_trip_obj = await _load_trip(db, old_trip_id)
+        await broadcaster.broadcast("trip_updated", TripOut.from_orm_trip(old_trip_obj).model_dump())
     return out
 
 
@@ -202,11 +230,18 @@ async def update_trip(
         # Neue Aufträge hinzufügen
         orders_result = await db.execute(select(Order).where(Order.id.in_(new_order_ids - old_order_ids)))
         new_orders = list(orders_result.scalars().all())
+        relocated_from: set[uuid.UUID] = set()
         for o in new_orders:
-            if o.status != "offen":
+            if o.status == "zugeteilt":
+                old_trip_id = await _detach_from_other_trip(db, o, trip_id)
+                if old_trip_id is None:
+                    raise HTTPException(status_code=409, detail=f"Auftrag {o.id} kann nicht verschoben werden")
+                relocated_from.add(old_trip_id)
+            elif o.status != "offen":
                 raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen")
-            o.status = "zugeteilt"
-            db.add(StatusLog(entity_type="order", entity_id=o.id, old_status="offen", new_status="zugeteilt", changed_by=current_user.id))
+            else:
+                o.status = "zugeteilt"
+                db.add(StatusLog(entity_type="order", entity_id=o.id, old_status="offen", new_status="zugeteilt", changed_by=current_user.id))
 
         # Reihenfolge neu setzen
         await db.flush()
@@ -234,6 +269,9 @@ async def update_trip(
     for order in freed_orders:
         await db.refresh(order)
         await broadcaster.broadcast("order_updated", OrderOut.model_validate(order).model_dump())
+    for old_trip_id in relocated_from:
+        old_trip_obj = await _load_trip(db, old_trip_id)
+        await broadcaster.broadcast("trip_updated", TripOut.from_orm_trip(old_trip_obj).model_dump())
     return out
 
 

@@ -1,8 +1,8 @@
 <template>
   <div
     class="karte"
-    :class="[`karte--${order.priority}`, { 'karte--nicht-ziehbar': order.status !== 'offen' }]"
-    :draggable="order.status === 'offen'"
+    :class="[`karte--${order.priority}`, { 'karte--nicht-ziehbar': !isDraggable }]"
+    :draggable="isDraggable"
     @dragstart="onDragStart"
   >
     <div class="karte__header">
@@ -44,6 +44,7 @@ const emit = defineEmits(['cancel', 'edit'])
 
 const tripTypeLabels = { besorgung: 'Besorgung', hinfahrt: 'Hinfahrt', abholung: 'Abholung' }
 const tripTypeLabel = tripTypeLabels[props.order.trip_type] ?? props.order.trip_type
+const isDraggable = ['offen', 'zugeteilt'].includes(props.order.status)
 
 function onCancel() {
   if (!confirm('Auftrag wirklich stornieren?')) return

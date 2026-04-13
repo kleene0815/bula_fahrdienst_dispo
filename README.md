@@ -88,10 +88,10 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Beim Abbrechen einer Fahrt oder Stornieren eines Auftrags sollte noch eine Abfrage kommen, dass man sich nicht versehentlich verklickt.
 - [x] Eine Fahrt soll optional einen Namen haben können. Wird kein Name angegeben, soll der Name "Fahrt #<id>" lauten.
 - [x] Eine Fahrt soll auch ohne Fahrer und ohne Fahrzeug gespeichert werden können. Dies sollte in der Übersicht dann aber kenntlich gemacht werden, dass hier noch ein Fahrer bzw. ein Fahrzeug fehlt.
-- [ ] Wenn man mit der Maus über einen Auftrag fährt, der nicht mehr offen ist, dann soll man am Mauszeiger klar erkennen, dass man den Auftrag nicht mehr per Drag & Drop verschieben kann.
-- [ ] Bei Aufträgen in einer Fahrt soll die Reihenfolge manuell festgelegt werden können.
-- [ ] Aufträge, die schon einer Fahrt zugeordnet sind, die noch nicht gestartet ist, sollen per Drag & Drop in eine andere Fahrt verschoben werden können.
+- [x] Wenn man mit der Maus über einen Auftrag fährt, der nicht mehr offen ist, dann soll man am Mauszeiger klar erkennen, dass man den Auftrag nicht mehr per Drag & Drop verschieben kann.
+- [x] Bei Aufträgen in einer Fahrt soll die Reihenfolge manuell festgelegt werden können.
+- [x] Aufträge, die schon einer Fahrt zugeordnet sind, die noch nicht gestartet ist, sollen per Drag & Drop in eine andere Fahrt verschoben werden können.
 
 ### Bugs
-- [ ] Aufträge mit Priorität gering können nicht erstellt werden. "Mittel" soll die Standard-Priorität sein.
-- [ ] In Fahrten, die noch nicht gestartet sind, soll man auch Fahrer und Fahrzeug wieder entfernen können.
+- [x] Aufträge mit Priorität gering können nicht erstellt werden. "Mittel" soll die Standard-Priorität sein.
+- [x] In Fahrten, die noch nicht gestartet sind, soll man auch Fahrer und Fahrzeug wieder entfernen können.

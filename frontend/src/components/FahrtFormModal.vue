@@ -48,25 +48,44 @@
         <!-- Aufträge -->
         <section class="section">
           <h4>Aufträge</h4>
-          <div class="order-list">
-            <label
-              v-for="o in selectableOrders"
+
+          <!-- Ausgewählte Aufträge (sortierbar) -->
+          <div v-if="form.order_ids.length > 0" class="selected-orders">
+            <div v-for="(orderId, idx) in form.order_ids" :key="orderId" class="selected-order">
+              <div class="reorder-btns">
+                <button type="button" :disabled="idx === 0" @click="moveOrder(idx, -1)">▲</button>
+                <button type="button" :disabled="idx === form.order_ids.length - 1" @click="moveOrder(idx, 1)">▼</button>
+              </div>
+              <span class="order-num">{{ idx + 1 }}</span>
+              <span class="order-check__label">
+                <strong>{{ getOrder(orderId)?.destination }}</strong>
+                <small>{{ formatTime(getOrder(orderId)?.deadline) }} · {{ getOrder(orderId)?.trip_type }}</small>
+                <small v-if="getOrder(orderId)?.patient_name">
+                  👤 {{ getOrder(orderId).patient_name }}<span v-if="getOrder(orderId).companion"> +1</span>
+                </small>
+              </span>
+              <button type="button" class="btn-icon btn-remove" title="Entfernen" @click="removeOrder(orderId)">✕</button>
+            </div>
+          </div>
+
+          <!-- Verfügbare Aufträge zum Hinzufügen -->
+          <div v-if="availableOrders.length > 0" class="available-orders">
+            <p class="available-label">Hinzufügen:</p>
+            <div
+              v-for="o in availableOrders"
               :key="o.id"
-              class="order-check"
+              class="available-order"
+              @click="addOrder(o.id)"
             >
-              <input
-                type="checkbox"
-                :value="o.id"
-                v-model="form.order_ids"
-              />
+              <span class="available-order__plus">+</span>
               <span class="order-check__label">
                 <strong>{{ o.destination }}</strong>
                 <small>{{ formatTime(o.deadline) }} · {{ o.trip_type }}</small>
                 <small v-if="o.patient_name">👤 {{ o.patient_name }}<span v-if="o.companion"> +1</span></small>
               </span>
-            </label>
-            <p v-if="selectableOrders.length === 0" style="color:#aaa;font-size:13px">Keine offenen Aufträge</p>
+            </div>
           </div>
+          <p v-if="selectableOrders.length === 0" style="color:#aaa;font-size:13px">Keine offenen Aufträge</p>
         </section>
 
         <!-- Kapazität (nur wenn Fahrzeug gewählt) -->
@@ -142,6 +161,31 @@ const form = reactive({
 const selectedOrders = computed(() =>
   selectableOrders.value.filter((o) => form.order_ids.includes(o.id))
 )
+
+const availableOrders = computed(() =>
+  selectableOrders.value.filter((o) => !form.order_ids.includes(o.id))
+)
+
+function getOrder(orderId) {
+  return selectableOrders.value.find((o) => o.id === orderId)
+}
+
+function addOrder(orderId) {
+  if (!form.order_ids.includes(orderId)) form.order_ids.push(orderId)
+}
+
+function removeOrder(orderId) {
+  const idx = form.order_ids.indexOf(orderId)
+  if (idx !== -1) form.order_ids.splice(idx, 1)
+}
+
+function moveOrder(idx, delta) {
+  const newIdx = idx + delta
+  if (newIdx < 0 || newIdx >= form.order_ids.length) return
+  const arr = [...form.order_ids]
+  ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
+  form.order_ids.splice(0, form.order_ids.length, ...arr)
+}
 
 const usedSeats = computed(() => {
   let seats = 1
@@ -219,11 +263,38 @@ onMounted(async () => {
 .select-card.selected { border-color:#1565c0;background:#e3f2fd; }
 .select-card small { font-size:11px;color:#888; }
 
-.order-list { display:flex;flex-direction:column;gap:6px; }
-.order-check { display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:6px;border:1px solid #eee; }
-.order-check input { margin-top:2px; width:auto; }
-.order-check__label { display:flex;flex-direction:column;gap:2px; }
+.order-check__label { display:flex;flex-direction:column;gap:2px;flex:1; }
 .order-check__label small { color:#888;font-size:11px; }
+
+.selected-orders { display:flex;flex-direction:column;gap:4px;margin-bottom:10px; }
+.selected-order {
+  display:flex;align-items:center;gap:8px;
+  padding:8px;border-radius:6px;border:1px solid #1565c0;background:#f0f7ff;
+}
+.reorder-btns { display:flex;flex-direction:column;gap:2px; }
+.reorder-btns button {
+  padding:0 4px;font-size:10px;line-height:1.4;border:1px solid #ccc;
+  border-radius:3px;background:#fff;color:#555;cursor:pointer;
+}
+.reorder-btns button:disabled { opacity:0.3;cursor:default; }
+.order-num {
+  width:20px;height:20px;border-radius:50%;background:#1565c0;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;
+}
+.btn-remove {
+  padding:2px 6px;font-size:12px;border-radius:4px;border:none;
+  background:transparent;color:#aaa;cursor:pointer;flex-shrink:0;
+}
+.btn-remove:hover { color:#c62828; }
+
+.available-label { font-size:11px;color:#aaa;margin-bottom:4px; }
+.available-orders { display:flex;flex-direction:column;gap:4px; }
+.available-order {
+  display:flex;align-items:center;gap:8px;
+  padding:8px;border-radius:6px;border:1px dashed #ddd;cursor:pointer;
+}
+.available-order:hover { border-color:#1565c0;background:#f8faff; }
+.available-order__plus { font-size:16px;color:#1565c0;font-weight:600;flex-shrink:0;width:20px;text-align:center; }
 
 .kapazitaet { display:flex;align-items:center;gap:10px;margin-bottom:6px; }
 .kapazitaet__bar { flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden; }
