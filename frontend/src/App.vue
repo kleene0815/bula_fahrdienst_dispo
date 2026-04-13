@@ -48,8 +48,8 @@ body {
 .badge--abgeschlossen { background: #e8f5e9; color: #2e7d32; }
 .badge--abgebrochen   { background: #f5f5f5; color: #757575; }
 
-.badge--normal { background: #f5f5f5; color: #555; }
-.badge--mittel { background: #fff3e0; color: #e65100; }
+.badge--gering { background: #f5f5f5; color: #555; }
+.badge--normal { background: #e3f2fd; color: #1565c0; }
 .badge--hoch   { background: #ffebee; color: #c62828; }
 
 button {

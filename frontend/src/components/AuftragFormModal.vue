@@ -42,8 +42,8 @@
         <div class="field">
           <label>Priorität *</label>
           <select v-model="form.priority" required>
+            <option value="gering">Gering</option>
             <option value="normal">Normal</option>
-            <option value="mittel">Mittel</option>
             <option value="hoch">Hoch</option>
           </select>
         </div>
@@ -99,7 +99,7 @@ const form = reactive({
   destination: '',
   destination_address: '',
   deadline: '',
-  priority: 'normal',
+  priority: 'gering',
   patient_name: '',
   phone: '',
   companion: false,

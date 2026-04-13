@@ -51,8 +51,8 @@ function formatDeadline(iso) {
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 .karte--hoch   { border-left-color: #c62828; }
-.karte--mittel { border-left-color: #e65100; }
 .karte--normal { border-left-color: #1565c0; }
+.karte--gering { border-left-color: #ccc; }
 
 .karte__header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
 .karte__ziel { flex: 1; font-weight: 600; font-size: 14px; }
@@ -63,8 +63,8 @@ function formatDeadline(iso) {
   flex-shrink: 0;
 }
 .priority-dot--hoch   { background: #c62828; }
-.priority-dot--mittel { background: #e65100; }
 .priority-dot--normal { background: #1565c0; }
+.priority-dot--gering { background: #ccc; }
 
 .karte__meta { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; gap: 12px; }
 .karte__addr { color: #888; }
