@@ -26,7 +26,12 @@ export const useTripsStore = defineStore('trips', () => {
 
   async function create(data) {
     const trip = await api.post('/trips', data)
-    trips.value.push(trip)
+    const idx = trips.value.findIndex((t) => t.id === trip.id)
+    if (idx >= 0) {
+      trips.value[idx] = trip
+    } else {
+      trips.value.push(trip)
+    }
     return trip
   }
 
@@ -66,7 +71,9 @@ export const useTripsStore = defineStore('trips', () => {
   // Vom SSE-Stream aufgerufen
   function applyEvent(eventType, data) {
     if (eventType === 'trip_created') {
-      trips.value.push(data)
+      if (!trips.value.find((t) => t.id === data.id)) {
+        trips.value.push(data)
+      }
     } else if (eventType === 'trip_updated') {
       _replace(data)
     }

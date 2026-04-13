@@ -76,7 +76,7 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 
 ### Offen (nächste Iteration)
 
-- [ ] **Doppelte Darstellung** von Aufträgen/Fahrten nach dem Anlegen beheben (Deduplizierung zwischen lokalem Push und SSE-Event)
+- [x] **Doppelte Darstellung** von Aufträgen/Fahrten nach dem Anlegen beheben (Deduplizierung zwischen lokalem Push und SSE-Event)
 - [ ] **Deadline-UX verbessern:** Datumsauswahl als Schnellauswahl (Heute / Morgen / Datum wählen) + separates Uhrzeitfeld mit konfigurierbarem Standardwert
 - [ ] **Standard-Deadline-Uhrzeit** in den App-Einstellungen konfigurierbar machen
 - [ ] **Prioritäten umbenennen:** `mittel` → `gering` (Migration liegt vor, Frontend + Modell ausstehend)

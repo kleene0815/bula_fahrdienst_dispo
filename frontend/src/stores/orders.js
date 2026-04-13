@@ -18,7 +18,12 @@ export const useOrdersStore = defineStore('orders', () => {
 
   async function create(data) {
     const order = await api.post('/orders', data)
-    orders.value.push(order)
+    const idx = orders.value.findIndex((o) => o.id === order.id)
+    if (idx >= 0) {
+      orders.value[idx] = order
+    } else {
+      orders.value.push(order)
+    }
     return order
   }
 
@@ -37,7 +42,9 @@ export const useOrdersStore = defineStore('orders', () => {
   // Vom SSE-Stream aufgerufen
   function applyEvent(eventType, data) {
     if (eventType === 'order_created') {
-      orders.value.push(data)
+      if (!orders.value.find((o) => o.id === data.id)) {
+        orders.value.push(data)
+      }
     } else if (eventType === 'order_updated') {
       _replace(data)
     }
