@@ -1,0 +1,66 @@
+{
+  "realm": "fahrdienst",
+  "enabled": true,
+  "displayName": "Fahrdienst-Disposition",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "accessTokenLifespan": 300,
+
+  "roles": {
+    "realm": [
+      { "name": "disponent", "description": "Kann Aufträge und Fahrten verwalten" },
+      { "name": "fahrer",    "description": "Kann eigene Fahrten einsehen und Statusübergänge durchführen" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "fahrdienst-disposition",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:5173"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      }
+    }
+  ],
+
+  "users": [
+    {
+      "username": "disponent",
+      "enabled": true,
+      "email": "disponent@example.com",
+      "firstName": "Anna",
+      "lastName": "Disponent",
+      "credentials": [{ "type": "password", "value": "disponent", "temporary": false }],
+      "realmRoles": ["disponent"]
+    },
+    {
+      "username": "fahrer",
+      "enabled": true,
+      "email": "fahrer@example.com",
+      "firstName": "Max",
+      "lastName": "Fahrer",
+      "credentials": [{ "type": "password", "value": "fahrer", "temporary": false }],
+      "realmRoles": ["fahrer"]
+    },
+    {
+      "username": "beides",
+      "enabled": true,
+      "email": "beides@example.com",
+      "firstName": "Lisa",
+      "lastName": "Beides",
+      "credentials": [{ "type": "password", "value": "beides", "temporary": false }],
+      "realmRoles": ["disponent", "fahrer"]
+    }
+  ]
+}
