@@ -23,20 +23,13 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HTTP_PORT: 8080
-      # Management-Port 9000 für Health-Checks aktivieren
-      KC_HEALTH_ENABLED: "true"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
     ports:
       - "8088:8080"
-    healthcheck:
-      # Das Keycloak-Image (ubi9-micro) enthält kein curl/wget.
-      # Stattdessen: Bash-TCP-Check gegen den Management-Port 9000.
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && timeout 2 cat <&3 | grep -q '\"status\": \"UP\"'"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 40s
+    # Kein Health-Check: das ubi9-micro Image enthält weder curl noch bash.
+    # Das Backend lädt den JWKS-Cache lazy beim ersten Request — Keycloak
+    # muss beim Backend-Start nicht verfügbar sein.
 
   backend:
     build:
@@ -55,7 +48,7 @@ services:
       db:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        condition: service_started
 
   frontend:
     build:
