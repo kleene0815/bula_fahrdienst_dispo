@@ -82,4 +82,4 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] **Prioritäten umbenennen:** `mittel` → `gering`
 - [x] **Fahrtformular (Bearbeitung):** bereits zugeteilte Aufträge der Fahrt im Auftragsfeld anzeigen
 - [ ] **Drag & Drop:** Auftragskarten auf Fahrtkarten ziehen; Neue-Fahrt-Ablagezone in der Fahrten-Spalte
-- [ ] **Fahrer-Sync aus Keycloak:** Fahrer werden vor dem ersten Login via Keycloak Admin API synchronisiert
+- [x] **Fahrer-Sync aus Keycloak:** Fahrer werden vor dem ersten Login via Keycloak Admin API synchronisiert

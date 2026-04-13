@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import CurrentUser, DisponentUser
 from app.database import get_db
+from app.keycloak_admin import sync_fahrer_from_keycloak
 from app.models import User
 from app.schemas.users import UserListItem, UserOut
 from fastapi import Depends
@@ -24,6 +25,7 @@ async def list_drivers(
     _: DisponentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    await sync_fahrer_from_keycloak(db)
     result = await db.execute(
         select(User).options(selectinload(User.roles))
     )

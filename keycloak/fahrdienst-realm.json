@@ -15,6 +15,16 @@
 
   "clients": [
     {
+      "clientId": "fahrdienst-backend",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "fahrdienst-backend-secret",
+      "protocol": "openid-connect"
+    },
+    {
       "clientId": "fahrdienst-disposition",
       "enabled": true,
       "publicClient": true,

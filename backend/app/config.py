@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Wenn nicht gesetzt, wird keycloak_url verwendet (funktioniert außerhalb von Docker).
     keycloak_public_url: str = ""
 
+    # Keycloak Service Account — für Fahrer-Sync vor erstem Login (nur view-users)
+    keycloak_service_client_id: str = "fahrdienst-backend"
+    keycloak_service_client_secret: str = ""
+
     # CORS — kommagetrennte Liste erlaubter Origins
     cors_origins: list[str] = ["http://localhost:5173"]
 
