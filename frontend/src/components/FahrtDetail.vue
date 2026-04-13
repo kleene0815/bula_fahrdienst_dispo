@@ -53,7 +53,9 @@
 
           <!-- Detailansicht (aufklappbar) -->
           <div v-if="expanded.has(to.order.id)" class="stopp-item__details">
-            <p v-if="to.order.destination_address" class="detail-row">📍 {{ to.order.destination_address }}</p>
+            <p v-if="to.order.destination_street || to.order.destination_city" class="detail-row">
+              📍 {{ [to.order.destination_street, to.order.destination_city].filter(Boolean).join(', ') }}
+            </p>
             <template v-if="to.order.patient_name">
               <p class="detail-row">👤 {{ to.order.patient_name }}<span v-if="to.order.companion"> + Begleitperson</span></p>
               <p v-if="to.order.phone" class="detail-row">

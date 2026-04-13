@@ -8,7 +8,8 @@ class OrderCreate(BaseModel):
     trip_type: str
     destination_type: str
     destination: str
-    destination_address: str | None = None
+    destination_street: str | None = None
+    destination_city: str | None = None
     deadline: datetime
     priority: str = "normal"
     patient_name: str | None = None
@@ -28,7 +29,8 @@ class OrderUpdate(BaseModel):
     trip_type: str | None = None
     destination_type: str | None = None
     destination: str | None = None
-    destination_address: str | None = None
+    destination_street: str | None = None
+    destination_city: str | None = None
     deadline: datetime | None = None
     priority: str | None = None
     patient_name: str | None = None
@@ -44,7 +46,8 @@ class OrderOut(BaseModel):
     priority: str
     trip_type: str
     destination: str
-    destination_address: str | None
+    destination_street: str | None
+    destination_city: str | None
     destination_type: str
     deadline: datetime
     patient_name: str | None

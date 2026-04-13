@@ -36,8 +36,10 @@
               <td>{{ to.sort_order }}</td>
               <td>
                 {{ to.order.destination }}
-                <br v-if="to.order.destination_address" />
-                <small v-if="to.order.destination_address" style="color:#888">{{ to.order.destination_address }}</small>
+                <template v-if="to.order.destination_street || to.order.destination_city">
+                  <br />
+                  <small style="color:#888">{{ [to.order.destination_street, to.order.destination_city].filter(Boolean).join(', ') }}</small>
+                </template>
               </td>
               <td><span class="type-badge">{{ to.order.trip_type }}</span></td>
               <td>{{ formatDatetime(to.order.deadline) }}</td>
@@ -71,9 +73,13 @@
                   <td><strong>Ziel</strong></td>
                   <td>{{ to.order.destination }}</td>
                 </tr>
-                <tr v-if="to.order.destination_address">
-                  <td><strong>Adresse</strong></td>
-                  <td>{{ to.order.destination_address }}</td>
+                <tr v-if="to.order.destination_street">
+                  <td><strong>Straße</strong></td>
+                  <td>{{ to.order.destination_street }}</td>
+                </tr>
+                <tr v-if="to.order.destination_city">
+                  <td><strong>PLZ / Ort</strong></td>
+                  <td>{{ to.order.destination_city }}</td>
                 </tr>
                 <tr>
                   <td><strong>Termin</strong></td>

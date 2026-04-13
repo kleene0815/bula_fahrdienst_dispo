@@ -10,6 +10,7 @@
       <div class="fahrt-karte__title">
         <strong>{{ trip.name || 'Fahrt #' + trip.trip_number }}</strong>
         <span :class="`badge badge--${trip.status}`">{{ trip.status }}</span>
+        <span v-if="routeCities.length" class="fahrt-karte__route">{{ routeCities.join(' · ') }}</span>
       </div>
       <div class="fahrt-karte__actions">
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Bearbeiten" @click="$emit('edit')">✏</button>
@@ -37,37 +38,96 @@
     </div>
 
     <!-- Stoppliste -->
-    <ol class="stopps">
-      <li v-for="to in trip.orders" :key="to.order.id" class="stopp" :class="`stopp--${to.order.status}`">
-        <span class="stopp__num">{{ to.sort_order }}</span>
+    <VueDraggable
+      v-model="localOrders"
+      :group="{ name: 'trip-stops', pull: trip.status === 'geplant', put: trip.status === 'geplant' }"
+      :disabled="trip.status !== 'geplant'"
+      :animation="150"
+      handle=".drag-handle"
+      class="stopps"
+      :data-trip-id="trip.id"
+      @start="onStopDragStart"
+      @end="onStopReorder"
+      @add="onStopAdded"
+    >
+      <div v-for="(to, index) in localOrders" :key="to.order.id" class="stopp" :class="`stopp--${to.order.status}`">
+        <span v-if="trip.status === 'geplant'" class="drag-handle">⠿</span>
+        <span class="stopp__num">{{ index + 1 }}</span>
         <span class="stopp__ziel">{{ to.order.destination }}</span>
         <span class="stopp__deadline">{{ formatTime(to.order.deadline) }}</span>
         <span :class="`badge badge--${to.order.trip_type}`" style="font-size:11px">{{ to.order.trip_type }}</span>
-      </li>
-    </ol>
+      </div>
+    </VueDraggable>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { VueDraggable } from 'vue-draggable-plus'
 
 const props = defineProps({ trip: Object })
-const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'drop-order'])
+const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
 
 const isDragOver = ref(false)
+
+// Lokale Kopie für VueDraggable (wird bei Store-Updates synchronisiert)
+const localOrders = ref([...props.trip.orders])
+watch(() => props.trip.orders, (newOrders) => {
+  localOrders.value = [...newOrders]
+}, { deep: true })
+
+function onStopDragStart(evt) {
+  const to = localOrders.value[evt.oldIndex]
+  if (!to) return
+  // Drag-Infos über Vue-Event weitergeben (zuverlässiger als dataTransfer bei SortableJS)
+  emit('stop-drag-start', { orderId: to.order.id, sourceTripId: props.trip.id })
+}
+
+function onStopReorder(evt) {
+  emit('stop-drag-end')
+  if (evt.from !== evt.to) return  // cross-trip move — wird von @add behandelt
+  if (evt.oldIndex === evt.newIndex) return
+  emit('reorder', localOrders.value.map((to) => to.order.id))
+}
+
+function onStopAdded(evt) {
+  const movedOrder = localOrders.value[evt.newIndex]
+  if (!movedOrder) return
+  const sourceTripId = evt.from.dataset.tripId
+  emit('order-moved', {
+    orderId: movedOrder.order.id,
+    sourceTripId,
+    newOrderIds: localOrders.value.map((to) => to.order.id),
+  })
+}
 
 function onDrop(event) {
   isDragOver.value = false
   if (props.trip.status !== 'geplant') return
   const orderId = event.dataTransfer.getData('order-id')
   if (!orderId) return
-  emit('drop-order', orderId)
+  const sourceTripId = event.dataTransfer.getData('source-trip-id')
+  if (sourceTripId === props.trip.id) return // Innerhalb derselben Fahrt — von VueDraggable behandelt
+  emit('drop-order', { orderId, sourceTripId: sourceTripId || null })
 }
 
 function onAbort() {
   if (!confirm('Fahrt wirklich abbrechen?')) return
   emit('abort')
 }
+
+const routeCities = computed(() => {
+  const seen = new Set()
+  const cities = []
+  for (const { order: o } of props.trip.orders) {
+    const city = o.destination_city?.replace(/^\d{5}\s+/, '').trim()
+    if (city && !seen.has(city)) {
+      seen.add(city)
+      cities.push(city)
+    }
+  }
+  return cities
+})
 
 const usedSeats = computed(() => {
   let seats = 1 // Fahrer
@@ -112,7 +172,8 @@ function formatTime(iso) {
   box-shadow: 0 0 0 2px rgba(21,101,192,.25);
 }
 .fahrt-karte__header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
-.fahrt-karte__title { display: flex; align-items: center; gap: 8px; }
+.fahrt-karte__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fahrt-karte__route { color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .fahrt-karte__actions { display: flex; gap: 4px; flex-wrap: wrap; }
 .fahrt-karte__info { font-size: 12px; color: #666; display: flex; gap: 16px; margin-bottom: 8px; }
 
@@ -135,6 +196,9 @@ function formatTime(iso) {
 .stopp__num { width: 20px; height: 20px; border-radius: 50%; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .stopp__ziel { flex: 1; }
 .stopp__deadline { color: #888; }
+.drag-handle { color: #ccc; cursor: grab; font-size: 14px; flex-shrink: 0; line-height: 1; }
+.drag-handle:hover { color: #999; }
+.drag-handle:active { cursor: grabbing; }
 
 .btn-icon {
   padding: 4px 8px;

@@ -50,7 +50,7 @@
         </div>
         <div class="card-list">
           <FahrtKarte
-            v-for="trip in tripsStore.trips"
+            v-for="trip in sortedTrips"
             :key="trip.id"
             :trip="trip"
             @complete="tripsStore.complete(trip.id)"
@@ -58,6 +58,10 @@
             @print="printTrip = trip"
             @edit="editingTrip = trip; showTripForm = true"
             @drop-order="onDropOrderToTrip(trip, $event)"
+            @reorder="onReorderTrip(trip, $event)"
+            @order-moved="onOrderMoved(trip, $event)"
+            @stop-drag-start="draggingStop = $event"
+            @stop-drag-end="draggingStop = null"
           />
           <p v-if="tripsStore.trips.length === 0" class="empty">Keine aktiven Fahrten</p>
           <div
@@ -81,7 +85,7 @@
     <FahrtFormModal
       v-if="showTripForm"
       :trip="editingTrip"
-      :open-orders="openOrders"
+      :open-orders="tripFormOrders"
       :pre-selected-order-id="preSelectedOrderId"
       @saved="onTripSaved"
       @close="showTripForm = false; editingTrip = null; preSelectedOrderId = null"
@@ -120,6 +124,7 @@ const printTrip = ref(null)
 const activeFilter = ref('alle')
 const preSelectedOrderId = ref(null)
 const dragOverNewTrip = ref(false)
+const draggingStop = ref(null) // { orderId, sourceTripId } — gesetzt während SortableJS-Drag
 
 const statusFilters = [
   { value: 'alle', label: 'Alle' },
@@ -129,6 +134,21 @@ const statusFilters = [
   { value: 'erledigt', label: 'Erledigt' },
 ]
 
+const STATUS_ORDER = { aktiv: 0, geplant: 1, abgeschlossen: 2, abgebrochen: 3 }
+
+function earliestDeadline(trip) {
+  if (!trip.orders.length) return Infinity
+  return Math.min(...trip.orders.map((to) => new Date(to.order.deadline).getTime()))
+}
+
+const sortedTrips = computed(() =>
+  [...tripsStore.trips].sort((a, b) => {
+    const statusDiff = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
+    if (statusDiff !== 0) return statusDiff
+    return earliestDeadline(a) - earliestDeadline(b)
+  })
+)
+
 const filteredOrders = computed(() => {
   if (activeFilter.value === 'alle') return ordersStore.orders
   return ordersStore.orders.filter((o) => o.status === activeFilter.value)
@@ -137,6 +157,15 @@ const filteredOrders = computed(() => {
 const openOrders = computed(() =>
   ordersStore.orders.filter((o) => o.status === 'offen')
 )
+
+// Für FahrtFormModal: offene Aufträge + ggf. vorausgewählter Auftrag (auch wenn noch zugeteilt)
+const tripFormOrders = computed(() => {
+  if (!preSelectedOrderId.value) return openOrders.value
+  const alreadyIncluded = openOrders.value.some((o) => o.id === preSelectedOrderId.value)
+  if (alreadyIncluded) return openOrders.value
+  const extra = ordersStore.orders.find((o) => o.id === preSelectedOrderId.value)
+  return extra ? [...openOrders.value, extra] : openOrders.value
+})
 
 const stats = computed(() => ({
   offen: ordersStore.orders.filter((o) => o.status === 'offen').length,
@@ -155,16 +184,64 @@ function onTripSaved() {
   preSelectedOrderId.value = null
 }
 
-async function onDropOrderToTrip(trip, orderId) {
+async function onDropOrderToTrip(trip, payload) {
+  const orderId = typeof payload === 'string' ? payload : payload.orderId
   const currentIds = trip.orders.map((to) => to.order.id)
   if (currentIds.includes(orderId)) return
   await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
 }
 
-function onDropOrderToNewTrip(event) {
+async function onReorderTrip(trip, orderIds) {
+  await tripsStore.update(trip.id, { order_ids: orderIds })
+}
+
+async function onOrderMoved(targetTrip, { orderId, sourceTripId, newOrderIds }) {
+  // Zuerst aus der Quell-Fahrt entfernen, dann Ziel-Fahrt aktualisieren
+  if (sourceTripId) {
+    const sourceTrip = tripsStore.trips.find((t) => t.id === sourceTripId)
+    if (sourceTrip) {
+      const remainingIds = sourceTrip.orders
+        .filter((to) => to.order.id !== orderId)
+        .map((to) => to.order.id)
+      await tripsStore.update(sourceTripId, { order_ids: remainingIds })
+    }
+  }
+  await tripsStore.update(targetTrip.id, { order_ids: newOrderIds })
+}
+
+async function onDropOrderToNewTrip(event) {
   dragOverNewTrip.value = false
-  const orderId = event.dataTransfer.getData('order-id')
+
+  let orderId, sourceTripId
+
+  if (draggingStop.value) {
+    // Stopp aus einer Fahrt (SortableJS-Drag) — dataTransfer nicht zuverlässig
+    orderId = draggingStop.value.orderId
+    sourceTripId = draggingStop.value.sourceTripId
+    draggingStop.value = null
+  } else {
+    // Auftragskarte aus der linken Spalte (nativer HTML5-Drag)
+    orderId = event.dataTransfer.getData('order-id')
+    if (!orderId) return
+    // Auftrag könnte bereits zugeteilt sein — dann aus der aktuellen Fahrt entfernen
+    const sourceTrip = tripsStore.trips.find((t) =>
+      t.orders.some((to) => to.order.id === orderId)
+    )
+    sourceTripId = sourceTrip?.id ?? null
+  }
+
   if (!orderId) return
+
+  if (sourceTripId) {
+    const sourceTrip = tripsStore.trips.find((t) => t.id === sourceTripId)
+    if (sourceTrip) {
+      const remainingIds = sourceTrip.orders
+        .filter((to) => to.order.id !== orderId)
+        .map((to) => to.order.id)
+      await tripsStore.update(sourceTripId, { order_ids: remainingIds })
+    }
+  }
+
   preSelectedOrderId.value = orderId
   showTripForm.value = true
 }

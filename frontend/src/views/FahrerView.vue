@@ -37,9 +37,19 @@ const router = useRouter()
 const loading = ref(true)
 const completedMessage = ref(null)
 
+function earliestDeadline(trip) {
+  if (!trip.orders.length) return Infinity
+  return Math.min(...trip.orders.map((to) => new Date(to.order.deadline).getTime()))
+}
+
 // Wenn via QR-Code eine spezifische Fahrt-ID übergeben wurde, diese zuerst anzeigen
 const activeTrip = computed(() => {
-  const trips = tripsStore.myTrips
+  const trips = [...tripsStore.myTrips].sort((a, b) => {
+    const statusOrder = { aktiv: 0, geplant: 1, abgeschlossen: 2, abgebrochen: 3 }
+    const statusDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)
+    if (statusDiff !== 0) return statusDiff
+    return earliestDeadline(a) - earliestDeadline(b)
+  })
   if (route.query.tripId) {
     return trips.find((t) => t.id === route.query.tripId) ?? trips[0] ?? null
   }

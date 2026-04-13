@@ -12,7 +12,9 @@
     </div>
     <div class="karte__meta">
       <span>{{ formatDeadline(order.deadline) }}</span>
-      <span v-if="order.destination_address" class="karte__addr">{{ order.destination_address }}</span>
+      <span v-if="order.destination_street || order.destination_city" class="karte__addr">
+        {{ [order.destination_street, order.destination_city].filter(Boolean).join(', ') }}
+      </span>
     </div>
     <div v-if="order.patient_name" class="karte__patient">
       👤 {{ order.patient_name }}

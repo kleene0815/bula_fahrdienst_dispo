@@ -32,8 +32,12 @@
           <input v-model="form.destination" type="text" required placeholder="z.B. Apotheke am Markt" />
         </div>
         <div class="field">
-          <label>Adresse des Ziels</label>
-          <input v-model="form.destination_address" type="text" placeholder="Straße, PLZ Ort" />
+          <label>Straße / Hausnummer</label>
+          <input v-model="form.destination_street" type="text" placeholder="z.B. Hauptstraße 12" />
+        </div>
+        <div class="field">
+          <label>PLZ / Ort</label>
+          <input v-model="form.destination_city" type="text" placeholder="z.B. 86150 Augsburg" />
         </div>
         <div class="field">
           <label>Deadline / Termin *</label>
@@ -133,7 +137,8 @@ const form = reactive({
   trip_type: 'besorgung',
   destination_type: 'apotheke',
   destination: '',
-  destination_address: '',
+  destination_street: '',
+  destination_city: '',
   priority: 'normal',
   patient_name: '',
   phone: '',
@@ -193,7 +198,8 @@ async function submit() {
       deadline,
       patient_name: form.trip_type === 'besorgung' ? null : (form.patient_name || null),
       phone: form.phone || null,
-      destination_address: form.destination_address || null,
+      destination_street: form.destination_street || null,
+      destination_city: form.destination_city || null,
       notes: form.notes || null,
       requester_station: form.requester_station || null,
     }
