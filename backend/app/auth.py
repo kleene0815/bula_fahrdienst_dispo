@@ -71,7 +71,8 @@ async def get_current_user(
     )
     user = result.scalar_one_or_none()
 
-    if user is None:
+    is_new = user is None
+    if is_new:
         user = User(keycloak_sub=sub, name=name, email=email)
         db.add(user)
         await db.flush()
@@ -79,14 +80,17 @@ async def get_current_user(
         user.name = name
         user.email = email
 
-    # Rollen synchronisieren
-    existing_roles = {r.role for r in user.roles}
+    # Rollen synchronisieren.
+    # Bei neuen Nutzern ist die Liste leer (noch nichts in der DB) — kein DB-Zugriff nötig.
+    # Bei bestehenden Nutzern wurde die Relation bereits per selectinload geladen.
+    existing_roles: set[str] = set() if is_new else {r.role for r in user.roles}
     for role in app_roles:
         if role not in existing_roles:
             db.add(UserRole(user_id=user.id, role=role))
-    for role_obj in list(user.roles):
-        if role_obj.role not in app_roles:
-            await db.delete(role_obj)
+    if not is_new:
+        for role_obj in list(user.roles):
+            if role_obj.role not in app_roles:
+                await db.delete(role_obj)
 
     await db.commit()
     await db.refresh(user, ["roles"])
