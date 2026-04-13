@@ -44,7 +44,7 @@
           <h4>Aufträge</h4>
           <div class="order-list">
             <label
-              v-for="o in openOrders"
+              v-for="o in selectableOrders"
               :key="o.id"
               class="order-check"
             >
@@ -59,7 +59,7 @@
                 <small v-if="o.patient_name">👤 {{ o.patient_name }}<span v-if="o.companion"> +1</span></small>
               </span>
             </label>
-            <p v-if="openOrders.length === 0" style="color:#aaa;font-size:13px">Keine offenen Aufträge</p>
+            <p v-if="selectableOrders.length === 0" style="color:#aaa;font-size:13px">Keine offenen Aufträge</p>
           </div>
         </section>
 
@@ -106,6 +106,14 @@ import { api } from '@/api/client'
 const props = defineProps({ trip: Object, openOrders: Array })
 const emit = defineEmits(['saved', 'close'])
 
+const selectableOrders = computed(() => {
+  if (!props.trip) return props.openOrders
+  const tripOrderIds = new Set(props.trip.orders.map((to) => to.order.id))
+  const tripOrders = props.trip.orders.map((to) => to.order)
+  const additionalOpen = props.openOrders.filter((o) => !tripOrderIds.has(o.id))
+  return [...tripOrders, ...additionalOpen]
+})
+
 const tripsStore = useTripsStore()
 const vehiclesStore = useVehiclesStore()
 const users = ref([])
@@ -120,7 +128,7 @@ const form = reactive({
 })
 
 const selectedOrders = computed(() =>
-  props.openOrders.filter((o) => form.order_ids.includes(o.id))
+  selectableOrders.value.filter((o) => form.order_ids.includes(o.id))
 )
 
 const usedSeats = computed(() => {
