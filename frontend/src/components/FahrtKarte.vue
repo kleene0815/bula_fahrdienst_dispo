@@ -1,5 +1,11 @@
 <template>
-  <div class="fahrt-karte">
+  <div
+    class="fahrt-karte"
+    :class="{ 'fahrt-karte--drop-target': isDragOver && trip.status === 'geplant' }"
+    @dragover.prevent="isDragOver = trip.status === 'geplant'"
+    @dragleave="isDragOver = false"
+    @drop="onDrop"
+  >
     <div class="fahrt-karte__header">
       <div class="fahrt-karte__title">
         <strong>Fahrt #{{ trip.trip_number }}</strong>
@@ -43,10 +49,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({ trip: Object })
-defineEmits(['complete', 'abort', 'print', 'edit'])
+const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'drop-order'])
+
+const isDragOver = ref(false)
+
+function onDrop(event) {
+  isDragOver.value = false
+  if (props.trip.status !== 'geplant') return
+  const orderId = event.dataTransfer.getData('order-id')
+  if (!orderId) return
+  emit('drop-order', orderId)
+}
 
 const usedSeats = computed(() => {
   let seats = 1 // Fahrer
@@ -84,6 +100,11 @@ function formatTime(iso) {
   border: 1px solid #e0e0e0;
   padding: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  transition: border-color .15s, box-shadow .15s;
+}
+.fahrt-karte--drop-target {
+  border-color: #1565c0;
+  box-shadow: 0 0 0 2px rgba(21,101,192,.25);
 }
 .fahrt-karte__header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .fahrt-karte__title { display: flex; align-items: center; gap: 8px; }

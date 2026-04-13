@@ -1,5 +1,10 @@
 <template>
-  <div class="karte" :class="`karte--${order.priority}`">
+  <div
+    class="karte"
+    :class="`karte--${order.priority}`"
+    :draggable="order.status === 'offen'"
+    @dragstart="onDragStart"
+  >
     <div class="karte__header">
       <span class="priority-dot" :class="`priority-dot--${order.priority}`"></span>
       <span class="karte__ziel">{{ order.destination }}</span>
@@ -34,8 +39,13 @@
 </template>
 
 <script setup>
-defineProps({ order: Object })
+const props = defineProps({ order: Object })
 defineEmits(['cancel', 'edit'])
+
+function onDragStart(event) {
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('order-id', props.order.id)
+}
 
 function formatDeadline(iso) {
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
@@ -49,6 +59,13 @@ function formatDeadline(iso) {
   border-left: 4px solid #ccc;
   padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.karte[draggable="true"] {
+  cursor: grab;
+}
+.karte[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.7;
 }
 .karte--hoch   { border-left-color: #c62828; }
 .karte--normal { border-left-color: #1565c0; }

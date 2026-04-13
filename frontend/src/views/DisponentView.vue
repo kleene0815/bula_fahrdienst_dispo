@@ -57,8 +57,16 @@
             @abort="tripsStore.abort(trip.id)"
             @print="printTrip = trip"
             @edit="editingTrip = trip; showTripForm = true"
+            @drop-order="onDropOrderToTrip(trip, $event)"
           />
           <p v-if="tripsStore.trips.length === 0" class="empty">Keine aktiven Fahrten</p>
+          <div
+            class="neue-fahrt-zone"
+            :class="{ 'neue-fahrt-zone--active': dragOverNewTrip }"
+            @dragover.prevent="dragOverNewTrip = true"
+            @dragleave="dragOverNewTrip = false"
+            @drop="onDropOrderToNewTrip"
+          >+ Neue Fahrt</div>
         </div>
       </section>
     </main>
@@ -74,8 +82,9 @@
       v-if="showTripForm"
       :trip="editingTrip"
       :open-orders="openOrders"
+      :pre-selected-order-id="preSelectedOrderId"
       @saved="onTripSaved"
-      @close="showTripForm = false; editingTrip = null"
+      @close="showTripForm = false; editingTrip = null; preSelectedOrderId = null"
     />
     <AuftragsscheinDruck
       v-if="printTrip"
@@ -109,6 +118,8 @@ const editingOrder = ref(null)
 const editingTrip = ref(null)
 const printTrip = ref(null)
 const activeFilter = ref('alle')
+const preSelectedOrderId = ref(null)
+const dragOverNewTrip = ref(false)
 
 const statusFilters = [
   { value: 'alle', label: 'Alle' },
@@ -141,6 +152,21 @@ function onOrderSaved() {
 function onTripSaved() {
   showTripForm.value = false
   editingTrip.value = null
+  preSelectedOrderId.value = null
+}
+
+async function onDropOrderToTrip(trip, orderId) {
+  const currentIds = trip.orders.map((to) => to.order.id)
+  if (currentIds.includes(orderId)) return
+  await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
+}
+
+function onDropOrderToNewTrip(event) {
+  dragOverNewTrip.value = false
+  const orderId = event.dataTransfer.getData('order-id')
+  if (!orderId) return
+  preSelectedOrderId.value = orderId
+  showTripForm.value = true
 }
 
 // SSE
@@ -241,4 +267,19 @@ onUnmounted(() => {
   gap: 8px;
 }
 .empty { color: #aaa; font-size: 13px; text-align: center; padding: 20px 0; }
+
+.neue-fahrt-zone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.neue-fahrt-zone--active {
+  border-color: #1565c0;
+  color: #1565c0;
+  background: #e3f2fd;
+}
 </style>

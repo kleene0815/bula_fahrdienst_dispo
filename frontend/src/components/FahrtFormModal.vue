@@ -103,7 +103,7 @@ import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
 import { api } from '@/api/client'
 
-const props = defineProps({ trip: Object, openOrders: Array })
+const props = defineProps({ trip: Object, openOrders: Array, preSelectedOrderId: String })
 const emit = defineEmits(['saved', 'close'])
 
 const selectableOrders = computed(() => {
@@ -120,10 +120,15 @@ const users = ref([])
 const saving = ref(false)
 const error = ref(null)
 
+const initialOrderIds = props.trip?.orders.map((to) => to.order.id) ?? []
+if (props.preSelectedOrderId && !initialOrderIds.includes(props.preSelectedOrderId)) {
+  initialOrderIds.push(props.preSelectedOrderId)
+}
+
 const form = reactive({
   driver_id: props.trip?.driver?.id ?? null,
   vehicle_id: props.trip?.vehicle?.id ?? null,
-  order_ids: props.trip?.orders.map((to) => to.order.id) ?? [],
+  order_ids: initialOrderIds,
   notes: props.trip?.notes ?? '',
 })
 
