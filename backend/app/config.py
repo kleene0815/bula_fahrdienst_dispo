@@ -8,8 +8,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://user:password@localhost/fahrdienst"
 
     # Keycloak
+    # keycloak_url: interne URL für JWKS-Fetch (im Docker: http://keycloak:8080)
     keycloak_url: str = "https://keycloak.example.com"
     keycloak_realm: str = "myrealm"
+    # keycloak_public_url: öffentliche URL für Issuer-Validierung — muss mit dem
+    # iss-Claim im JWT übereinstimmen (was der Browser beim Login gesehen hat).
+    # Wenn nicht gesetzt, wird keycloak_url verwendet (funktioniert außerhalb von Docker).
+    keycloak_public_url: str = ""
 
     # CORS — kommagetrennte Liste erlaubter Origins
     cors_origins: list[str] = ["http://localhost:5173"]
@@ -20,7 +25,8 @@ class Settings(BaseSettings):
 
     @property
     def keycloak_issuer(self) -> str:
-        return f"{self.keycloak_url}/realms/{self.keycloak_realm}"
+        base = self.keycloak_public_url or self.keycloak_url
+        return f"{base}/realms/{self.keycloak_realm}"
 
 
 settings = Settings()

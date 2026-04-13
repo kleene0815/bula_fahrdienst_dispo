@@ -41,6 +41,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://fahrdienst:fahrdienst@db/fahrdienst
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: fahrdienst
+      # Tokens enthalten iss: http://localhost:8088 (Browser-seitig ausgestellt)
+      KEYCLOAK_PUBLIC_URL: http://localhost:8088
       CORS_ORIGINS: '["http://localhost:5173"]'
     ports:
       - "8000:8000"
