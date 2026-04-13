@@ -14,4 +14,15 @@ app.use(router)
 const auth = useAuthStore()
 auth.init().then(() => {
   app.mount('#app')
+
+  // Jetzt sind Rollen bekannt — zur richtigen Standardansicht navigieren.
+  // Der Catch-all hat beim Erstzugriff noch keine Rollen gekannt.
+  const mobile = window.matchMedia('(max-width: 768px)').matches
+  if (auth.isDisponent && !mobile) {
+    router.replace({ name: 'disponent' })
+  } else if (auth.isFahrer) {
+    router.replace({ name: 'fahrer' })
+  } else if (auth.isDisponent) {
+    router.replace({ name: 'disponent' })
+  }
 })

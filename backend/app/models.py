@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -57,7 +57,7 @@ class Order(Base):
     destination: Mapped[str] = mapped_column(Text, nullable=False)
     destination_address: Mapped[str | None] = mapped_column(Text)
     destination_type: Mapped[str] = mapped_column(Text, nullable=False)
-    deadline: Mapped[datetime] = mapped_column(nullable=False)
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     patient_name: Mapped[str | None] = mapped_column(Text)
     phone: Mapped[str | None] = mapped_column(Text)
     companion: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
