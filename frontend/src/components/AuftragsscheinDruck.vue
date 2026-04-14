@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal">
       <div class="modal__actions no-print">
-        <button class="btn-primary" @click="window.print()">🖨 Drucken</button>
+        <button class="btn-primary" @click="doPrint">🖨 Drucken</button>
         <button class="btn-ghost" @click="$emit('close')">Schließen</button>
       </div>
 
@@ -113,7 +113,27 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '@/api/client'
 
 const props = defineProps({ trip: Object })
-defineEmits(['close'])
+const emit = defineEmits(['close'])
+
+function doPrint() {
+  const el = document.getElementById('druckansicht')
+  const styleTags = Array.from(document.querySelectorAll('style'))
+    .map(s => s.outerHTML).join('\n')
+  const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .map(l => l.outerHTML).join('\n')
+
+  const iframe = document.createElement('iframe')
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;'
+  document.body.appendChild(iframe)
+
+  iframe.contentDocument.write(
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Auftragsschein</title>${linkTags}${styleTags}</head><body>${el.outerHTML}</body></html>`
+  )
+  iframe.contentDocument.close()
+  iframe.contentWindow.print()
+  setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe) }, 1000)
+  emit('close')
+}
 
 const config = ref({})
 const qrDataUrl = ref(null)
@@ -184,9 +204,9 @@ onMounted(async () => {
 .patientenabschnitt__footer { display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #eee;font-size:10pt; }
 
 @media print {
-  .no-print { display:none !important; }
-  .modal-overlay { position:static;background:none;padding:0; }
-  .modal { width:100%;border-radius:0;box-shadow:none; }
   .druckansicht { padding:10mm; }
+  .trennlinie { break-before: avoid; }
+  .patientenabschnitt { break-inside: avoid; }
 }
 </style>
+

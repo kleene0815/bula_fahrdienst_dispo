@@ -9,6 +9,7 @@
       </div>
       <div class="topbar__user">
         <span>{{ auth.user?.name }}</span>
+        <button v-if="auth.isFahrer" class="btn-ghost" style="margin-left:8px" @click="router.push('/fahrer')">Fahrer-Ansicht</button>
         <button class="btn-ghost" style="margin-left:8px" @click="router.push('/einstellungen')">Einstellungen</button>
         <button class="btn-ghost" style="margin-left:8px" @click="auth.logout()">Abmelden</button>
       </div>

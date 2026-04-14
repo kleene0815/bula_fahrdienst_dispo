@@ -101,5 +101,5 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [ ] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
 
 ### Bugs
-- [ ] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.
-- [ ] Benutzer, die sowohl Fahrer als auch Disponent sind, können die Fahrer-Sicht nicht aufrufen.
+- [x] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.
+- [x] Benutzer, die sowohl Fahrer als auch Disponent sind, können die Fahrer-Sicht nicht aufrufen.

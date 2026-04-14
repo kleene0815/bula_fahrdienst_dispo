@@ -2,7 +2,10 @@
   <div class="fahrer-layout">
     <header class="fahrer-header">
       <h1>Meine Fahrten</h1>
-      <button class="btn-ghost" style="font-size:13px" @click="auth.logout()">Abmelden</button>
+      <div style="display:flex;gap:8px">
+        <button v-if="auth.isDisponent" class="btn-ghost" style="font-size:13px" @click="router.push('/disponent')">Disponent-Ansicht</button>
+        <button class="btn-ghost" style="font-size:13px" @click="auth.logout()">Abmelden</button>
+      </div>
     </header>
 
     <div v-if="loading" class="loading-screen">Laden…</div>
