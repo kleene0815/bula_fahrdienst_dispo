@@ -2,10 +2,12 @@ import Keycloak from 'keycloak-js'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const env = window.__env__ ?? {}
+
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL,
-  realm: import.meta.env.VITE_KEYCLOAK_REALM,
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+  url: env.KEYCLOAK_URL ?? import.meta.env.VITE_KEYCLOAK_URL,
+  realm: env.KEYCLOAK_REALM ?? import.meta.env.VITE_KEYCLOAK_REALM,
+  clientId: env.KEYCLOAK_CLIENT_ID ?? import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
 })
 
 export const useAuthStore = defineStore('auth', () => {
