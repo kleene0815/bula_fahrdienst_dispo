@@ -10,8 +10,7 @@
         <!-- Kopfbereich -->
         <header class="druck-header">
           <div class="druck-header__left">
-            <h1>Auftragsschein</h1>
-            <p>Fahrt #{{ trip.trip_number }} · {{ formatDate(trip.created_at) }}</p>
+            <h1>Auftragsschein – {{ trip.name || 'Fahrt #' + trip.trip_number }}</h1>
             <p>Fahrer: <strong>{{ trip.driver?.name }}</strong></p>
             <p>Fahrzeug: <strong>{{ trip.vehicle?.name }}</strong> ({{ trip.vehicle?.license_plate }})</p>
           </div>
@@ -27,7 +26,7 @@
               <th>#</th>
               <th>Ziel</th>
               <th>Typ</th>
-              <th>Termin</th>
+              <th>Termin/Deadline</th>
               <th>Patient</th>
             </tr>
           </thead>
@@ -65,7 +64,6 @@
           <div class="patientenabschnitt">
             <div class="patientenabschnitt__header">
               <strong>Patientenbegleitschein</strong>
-              <span>Fahrt #{{ trip.trip_number }}</span>
             </div>
             <table class="patient-tabelle">
               <tbody>
@@ -82,7 +80,7 @@
                   <td>{{ to.order.destination_city }}</td>
                 </tr>
                 <tr>
-                  <td><strong>Termin</strong></td>
+                  <td><strong>Termin/Deadline</strong></td>
                   <td>{{ formatDatetime(to.order.deadline) }}</td>
                 </tr>
                 <tr>
@@ -91,16 +89,7 @@
                 </tr>
               </tbody>
             </table>
-            <div class="patientenabschnitt__footer">
-              <div>
-                <strong>{{ config.security_center_name }}</strong><br />
-                Tel: {{ config.security_center_phone }}
-              </div>
-              <div>
-                {{ config.organizer_name }}<br />
-                {{ config.camp_address }}
-              </div>
-            </div>
+            <div v-if="config.printout_header_html" class="patientenabschnitt__footer" v-html="config.printout_header_html" />
           </div>
         </template>
       </div>

@@ -119,9 +119,6 @@ class AppConfig(Base):
     __tablename__ = "app_config"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    security_center_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    security_center_phone: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    organizer_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    camp_address: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    printout_header_html: Mapped[str] = mapped_column(Text, nullable=False, default="")
     default_deadline_time: Mapped[str] = mapped_column(Text, nullable=False, default="17:00")
     updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())

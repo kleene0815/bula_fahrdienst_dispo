@@ -91,7 +91,7 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Aufträge, die schon einer Fahrt zugeordnet sind, die noch nicht gestartet ist, sollen per Drag & Drop in eine andere Fahrt verschoben werden können.
 
 ### Offene Änderungswünsche 
-- [ ] Auftragsschein abändern:
+- [x] Auftragsschein abändern:
   - Überschriftszeile: `Auftragsschein - <Name der Fahrt>`
   - Die Felder aus der Konfiguration ersetzen durch eine Box, die z.B. durch ein HTML-Template in der Konfiguration gefüllt werden kann.
   - Die Fahrtnummer kann entfallen.

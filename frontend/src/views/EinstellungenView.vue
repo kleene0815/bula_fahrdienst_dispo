@@ -12,20 +12,9 @@
         <h2>App-Konfiguration</h2>
         <form @submit.prevent="saveConfig">
           <div class="field">
-            <label>Name der Sicherheitszentrale</label>
-            <input v-model="config.security_center_name" type="text" />
-          </div>
-          <div class="field">
-            <label>Telefonnummer der Sicherheitszentrale</label>
-            <input v-model="config.security_center_phone" type="text" />
-          </div>
-          <div class="field">
-            <label>Name des Veranstalters</label>
-            <input v-model="config.organizer_name" type="text" />
-          </div>
-          <div class="field">
-            <label>Adresse des Lagerplatzes</label>
-            <input v-model="config.camp_address" type="text" />
+            <label>Footer-Text auf Auftragsscheinen (HTML)</label>
+            <textarea v-model="config.printout_header_html" rows="6" style="font-family:monospace;font-size:12px;" />
+            <small style="color:#888">Wird als HTML im Footer der Patientenbegleitscheine gerendert.</small>
           </div>
           <div class="field">
             <label>Standard-Deadline-Uhrzeit</label>
@@ -139,10 +128,7 @@ const configSaving = ref(false)
 const configSaved = ref(false)
 
 const config = reactive({
-  security_center_name: '',
-  security_center_phone: '',
-  organizer_name: '',
-  camp_address: '',
+  printout_header_html: '',
   default_deadline_time: '17:00',
 })
 
