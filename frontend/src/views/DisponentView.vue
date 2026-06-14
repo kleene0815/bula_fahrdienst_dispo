@@ -187,9 +187,19 @@ function onTripSaved() {
 
 async function onDropOrderToTrip(trip, payload) {
   const orderId = typeof payload === 'string' ? payload : payload.orderId
+  const tripStatus = typeof payload === 'object' ? payload.tripStatus : trip.status
   const currentIds = trip.orders.map((to) => to.order.id)
   if (currentIds.includes(orderId)) return
-  await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
+
+  if (tripStatus === 'aktiv') {
+    const confirmed = confirm(
+      `Die Fahrt "${trip.name || 'Fahrt #' + trip.trip_number}" ist bereits gestartet.\n\nDen Auftrag trotzdem hinzufügen? Der Fahrer sieht ihn sofort als neuen Stopp.`
+    )
+    if (!confirmed) return
+    await tripsStore.addOrder(trip.id, orderId)
+  } else {
+    await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
+  }
 }
 
 async function onReorderTrip(trip, orderIds) {

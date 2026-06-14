@@ -1,8 +1,10 @@
 import secrets
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -289,6 +291,7 @@ async def start_trip(
         raise HTTPException(status_code=409, detail="Fahrt ist nicht im Status 'geplant'")
 
     trip.status = "aktiv"
+    trip.started_at = datetime.utcnow()
     db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status="geplant", new_status="aktiv", changed_by=current_user.id))
 
     for to in trip.trip_orders:
@@ -361,6 +364,45 @@ async def complete_trip(
     trip = await _load_trip(db, trip_id)
     out = TripOut.from_orm_trip(trip)
     await broadcaster.broadcast("trip_updated", out.model_dump())
+    return out
+
+
+class AddOrderBody(BaseModel):
+    order_id: uuid.UUID
+
+
+@router.post("/{trip_id}/add_order", response_model=TripOut)
+async def add_order_to_active_trip(
+    trip_id: uuid.UUID,
+    body: AddOrderBody,
+    current_user: DisponentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    trip = await _load_trip(db, trip_id)
+    if trip.status != "aktiv":
+        raise HTTPException(status_code=409, detail="Nur bei aktiven Fahrten möglich")
+
+    existing_ids = {to.order_id for to in trip.trip_orders}
+    if body.order_id in existing_ids:
+        raise HTTPException(status_code=409, detail="Auftrag ist bereits in dieser Fahrt")
+
+    order = await db.get(Order, body.order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    if order.status != "offen":
+        raise HTTPException(status_code=409, detail=f"Auftrag ist nicht offen (Status: {order.status})")
+
+    next_sort = max((to.sort_order for to in trip.trip_orders), default=0) + 1
+    db.add(TripOrder(trip_id=trip.id, order_id=order.id, sort_order=next_sort))
+
+    order.status = "unterwegs"
+    db.add(StatusLog(entity_type="order", entity_id=order.id, old_status="offen", new_status="unterwegs", changed_by=current_user.id))
+
+    await db.commit()
+    trip = await _load_trip(db, trip_id)
+    out = TripOut.from_orm_trip(trip)
+    await broadcaster.broadcast("trip_updated", out.model_dump())
+    await broadcaster.broadcast("order_updated", OrderOut.model_validate(order).model_dump())
     return out
 
 

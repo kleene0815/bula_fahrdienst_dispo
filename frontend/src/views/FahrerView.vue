@@ -27,10 +27,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTripsStore } from '@/stores/trips'
+import { api } from '@/api/client'
 import FahrtDetail from '@/components/FahrtDetail.vue'
 
 const auth = useAuthStore()
@@ -65,6 +66,17 @@ async function load() {
   loading.value = false
 }
 
+let eventSource = null
+
+async function connectSSE() {
+  eventSource = await api.sse('/events')
+  eventSource.addEventListener('trip_updated', (e) => tripsStore.applyEvent('trip_updated', JSON.parse(e.data)))
+}
+
+onUnmounted(() => {
+  if (eventSource) eventSource.close()
+})
+
 async function onComplete() {
   await tripsStore.complete(activeTrip.value.id)
   // Nach Abschluss kurze Bestätigung
@@ -72,7 +84,10 @@ async function onComplete() {
   await tripsStore.fetchMine()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  await connectSSE()
+})
 </script>
 
 <style scoped>

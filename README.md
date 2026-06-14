@@ -97,7 +97,7 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
   - Die Fahrtnummer kann entfallen.
   - Anstatt Termin sollte immer Termin/Deadline stehen.
   - Die Fahrtnummer auf den Patientenbegleitscheinen können auch entfallen.
-- [ ] Möglichkeit schaffen, schon begonnenen Fahrten neue Aufträge hinzuzufügen. (Fahrer-Ansicht muss dann den neuen Auftrag klar kennzeichnen)
+- [x] Möglichkeit schaffen, schon begonnenen Fahrten neue Aufträge hinzuzufügen. (Fahrer-Ansicht muss dann den neuen Auftrag klar kennzeichnen)
 - [ ] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
 - [ ] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
 - [ ] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.

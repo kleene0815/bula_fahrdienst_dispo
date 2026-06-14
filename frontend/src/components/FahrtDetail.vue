@@ -48,6 +48,7 @@
             </span>
             <span class="stopp-item__time">{{ formatTime(to.order.deadline) }}</span>
             <span :class="`badge badge--${to.order.trip_type}`" style="font-size:11px">{{ to.order.trip_type }}</span>
+            <span v-if="isNewStop(to)" class="badge badge--neu" style="font-size:11px">NEU</span>
             <span class="stopp-item__expand">{{ expanded.has(to.order.id) ? '▲' : '▼' }}</span>
           </div>
 
@@ -107,6 +108,11 @@ const allStopsDone = computed(() =>
 function isActiveStop(to) {
   if (props.trip.status !== 'aktiv') return false
   return to.order.status === 'unterwegs'
+}
+
+function isNewStop(to) {
+  if (props.trip.status !== 'aktiv' || !props.trip.started_at) return false
+  return new Date(to.created_at) > new Date(props.trip.started_at)
 }
 
 function toggleExpand(id) {
@@ -195,6 +201,8 @@ function formatTime(iso) {
 .detail-row--notes { color: #888; font-style: italic; }
 
 .stopp-item__done-btn { margin-top: 10px; width: 100%; }
+
+.badge--neu { background: #e65100; color: #fff; font-weight: 700; letter-spacing: 0.04em; }
 
 .stopp-item--rueckfahrt .stopp-item__content { text-align: center; }
 </style>

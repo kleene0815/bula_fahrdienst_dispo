@@ -83,6 +83,7 @@ class Trip(Base):
     vehicle_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("vehicles.id"))
     qr_token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=func.now())
     updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())
 
@@ -97,6 +98,7 @@ class TripOrder(Base):
     trip_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), primary_key=True)
     order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="RESTRICT"), primary_key=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     trip: Mapped["Trip"] = relationship(back_populates="trip_orders")
     order: Mapped["Order"] = relationship(back_populates="trip_orders")

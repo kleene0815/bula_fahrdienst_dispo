@@ -17,6 +17,7 @@ class DriverInfo(BaseModel):
 class TripOrderOut(BaseModel):
     sort_order: int
     order: OrderOut
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -46,6 +47,7 @@ class TripOut(BaseModel):
     vehicle: VehicleOut | None
     qr_token: str
     notes: str | None
+    started_at: datetime | None
     orders: list[TripOrderOut]
     created_at: datetime
     updated_at: datetime
@@ -63,10 +65,12 @@ class TripOut(BaseModel):
             vehicle=VehicleOut.model_validate(trip.vehicle) if trip.vehicle else None,
             qr_token=trip.qr_token,
             notes=trip.notes,
+            started_at=trip.started_at,
             orders=[
                 TripOrderOut(
                     sort_order=to.sort_order,
                     order=OrderOut.model_validate(to.order),
+                    created_at=to.created_at,
                 )
                 for to in trip.trip_orders
             ],

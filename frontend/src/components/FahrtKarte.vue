@@ -1,8 +1,8 @@
 <template>
   <div
     class="fahrt-karte"
-    :class="{ 'fahrt-karte--drop-target': isDragOver && trip.status === 'geplant' }"
-    @dragover.prevent="isDragOver = trip.status === 'geplant'"
+    :class="{ 'fahrt-karte--drop-target': isDragOver && ['geplant', 'aktiv'].includes(trip.status) }"
+    @dragover.prevent="isDragOver = ['geplant', 'aktiv'].includes(trip.status)"
     @dragleave="isDragOver = false"
     @drop="onDrop"
   >
@@ -103,12 +103,12 @@ function onStopAdded(evt) {
 
 function onDrop(event) {
   isDragOver.value = false
-  if (props.trip.status !== 'geplant') return
+  if (!['geplant', 'aktiv'].includes(props.trip.status)) return
   const orderId = event.dataTransfer.getData('order-id')
   if (!orderId) return
   const sourceTripId = event.dataTransfer.getData('source-trip-id')
   if (sourceTripId === props.trip.id) return // Innerhalb derselben Fahrt — von VueDraggable behandelt
-  emit('drop-order', { orderId, sourceTripId: sourceTripId || null })
+  emit('drop-order', { orderId, sourceTripId: sourceTripId || null, tripStatus: props.trip.status })
 }
 
 function onAbort() {
