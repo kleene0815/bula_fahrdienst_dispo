@@ -92,13 +92,16 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 
 ### Offene Änderungswünsche 
 - [ ] Auftragsschein abändern:
-  - Überschriftszeile: Auftragsschein - <Name der Fahrt>
+  - Überschriftszeile: `Auftragsschein - <Name der Fahrt>`
   - Die Felder aus der Konfiguration ersetzen durch eine Box, die z.B. durch ein HTML-Template in der Konfiguration gefüllt werden kann.
   - Die Fahrtnummer kann entfallen.
   - Anstatt Termin sollte immer Termin/Deadline stehen.
   - Die Fahrtnummer auf den Patientenbegleitscheinen können auch entfallen.
 - [ ] Möglichkeit schaffen, schon begonnenen Fahrten neue Aufträge hinzuzufügen. (Fahrer-Ansicht muss dann den neuen Auftrag klar kennzeichnen)
 - [ ] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
+- [ ] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
+- [ ] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.
+- [ ] Warnen, wenn zwei Fahrten sich zeitlich überschneiden, aber das gleiche Auto oder den gleichen Fahrer nutzen.
 
 ### Bugs
 - [x] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.

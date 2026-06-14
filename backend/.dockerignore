@@ -5,5 +5,3 @@ __pycache__
 .env
 .env.*
 .pytest_cache
-Dockerfile.dev
-entrypoint.dev.sh
