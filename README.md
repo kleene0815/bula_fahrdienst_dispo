@@ -89,8 +89,6 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Wenn man mit der Maus über einen Auftrag fährt, der nicht mehr offen ist, dann soll man am Mauszeiger klar erkennen, dass man den Auftrag nicht mehr per Drag & Drop verschieben kann.
 - [x] Bei Aufträgen in einer Fahrt soll die Reihenfolge manuell festgelegt werden können.
 - [x] Aufträge, die schon einer Fahrt zugeordnet sind, die noch nicht gestartet ist, sollen per Drag & Drop in eine andere Fahrt verschoben werden können.
-
-### Offene Änderungswünsche 
 - [x] Auftragsschein abändern:
   - Überschriftszeile: `Auftragsschein - <Name der Fahrt>`
   - Die Felder aus der Konfiguration ersetzen durch eine Box, die z.B. durch ein HTML-Template in der Konfiguration gefüllt werden kann.
@@ -101,7 +99,10 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
 - [x] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
 - [x] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.
-- [ ] Warnen, wenn zwei Fahrten sich zeitlich überschneiden, aber das gleiche Auto oder den gleichen Fahrer nutzen.
+
+### Offene Änderungswünsche 
+- Anpassungen am Routing: 
+  - [ ] Warnen, wenn zwei Fahrten sich zeitlich überschneiden, aber das gleiche Auto oder den gleichen Fahrer nutzen.
 
 ### Bugs
 - [x] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.
