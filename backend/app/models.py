@@ -123,4 +123,5 @@ class AppConfig(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     printout_header_html: Mapped[str] = mapped_column(Text, nullable=False, default="")
     default_deadline_time: Mapped[str] = mapped_column(Text, nullable=False, default="17:00")
+    destination_suggestions: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())

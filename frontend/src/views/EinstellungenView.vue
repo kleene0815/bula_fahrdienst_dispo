@@ -20,6 +20,23 @@
             <label>Standard-Deadline-Uhrzeit</label>
             <input v-model="config.default_deadline_time" type="time" />
           </div>
+
+          <div class="field">
+            <label>Häufige Zieladressen</label>
+            <div
+              v-for="(s, i) in config.destination_suggestions"
+              :key="i"
+              class="suggestion-row"
+            >
+              <input v-model="s.name" type="text" placeholder="Bezeichnung (z.B. Apotheke am Markt)" />
+              <input v-model="s.street" type="text" placeholder="Straße (z.B. Hauptstraße 12)" />
+              <input v-model="s.city" type="text" placeholder="PLZ / Ort (z.B. 86150 Augsburg)" />
+              <button type="button" class="btn-ghost btn-remove" @click="removeSuggestion(i)" title="Entfernen">✕</button>
+            </div>
+            <button type="button" class="btn-ghost" style="margin-top:8px;font-size:13px" @click="addSuggestion">
+              + Ziel hinzufügen
+            </button>
+          </div>
           <p v-if="configSaved" class="success">Gespeichert ✓</p>
           <button type="submit" class="btn-primary" :disabled="configSaving">
             {{ configSaving ? 'Wird gespeichert…' : 'Speichern' }}
@@ -130,7 +147,16 @@ const configSaved = ref(false)
 const config = reactive({
   printout_header_html: '',
   default_deadline_time: '17:00',
+  destination_suggestions: [],
 })
+
+function addSuggestion() {
+  config.destination_suggestions.push({ name: '', street: '', city: '' })
+}
+
+function removeSuggestion(i) {
+  config.destination_suggestions.splice(i, 1)
+}
 
 const vehicleForm = reactive({ name: '', license_plate: '', seats: 8, type: 'fest' })
 
@@ -219,6 +245,10 @@ onMounted(async () => {
 .vehicle-table tr.inactive td { color:#bbb; }
 
 .success { color:#2e7d32;font-size:13px;margin-bottom:10px; }
+
+.suggestion-row { display:grid;grid-template-columns:2fr 2fr 2fr auto;gap:6px;margin-bottom:6px;align-items:center; }
+.suggestion-row input { font-size:13px; }
+.btn-remove { padding:4px 8px;font-size:13px;color:#c00; }
 
 /* Modal */
 .modal-backdrop {

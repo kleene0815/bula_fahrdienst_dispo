@@ -29,7 +29,32 @@
         </div>
         <div class="field">
           <label>Name / Bezeichnung des Ziels *</label>
-          <input v-model="form.destination" type="text" required placeholder="z.B. Apotheke am Markt" />
+          <div class="autocomplete-wrap">
+            <input
+              v-model="form.destination"
+              type="text"
+              required
+              placeholder="z.B. Apotheke am Markt"
+              autocomplete="off"
+              @input="onDestinationInput"
+              @keydown.down.prevent="acIndex = Math.min(acIndex + 1, acFiltered.length - 1)"
+              @keydown.up.prevent="acIndex = Math.max(acIndex - 1, 0)"
+              @keydown.enter.prevent="acIndex >= 0 && selectSuggestion(acFiltered[acIndex])"
+              @keydown.escape="acOpen = false"
+              @blur="onDestinationBlur"
+            />
+            <ul v-if="acOpen && acFiltered.length" class="autocomplete-list">
+              <li
+                v-for="(s, i) in acFiltered"
+                :key="i"
+                :class="{ 'autocomplete-list__item--active': i === acIndex }"
+                @mousedown.prevent="selectSuggestion(s)"
+              >
+                <span class="ac-name">{{ s.name }}</span>
+                <span class="ac-addr">{{ s.street }}, {{ s.city }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="field">
           <label>Straße / Hausnummer</label>
@@ -119,7 +144,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, onMounted } from 'vue'
+import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useOrdersStore } from '@/stores/orders'
 import { api } from '@/api/client'
 
@@ -128,6 +153,33 @@ const emit = defineEmits(['saved', 'close'])
 const ordersStore = useOrdersStore()
 const saving = ref(false)
 const error = ref(null)
+
+const suggestions = ref([])
+const acOpen = ref(false)
+const acIndex = ref(-1)
+
+const acFiltered = computed(() => {
+  const q = form.destination.toLowerCase()
+  if (!q) return suggestions.value
+  return suggestions.value.filter((s) => s.name.toLowerCase().includes(q))
+})
+
+function onDestinationInput() {
+  acOpen.value = true
+  acIndex.value = -1
+}
+
+function onDestinationBlur() {
+  setTimeout(() => { acOpen.value = false }, 150)
+}
+
+function selectSuggestion(s) {
+  form.destination = s.name
+  form.destination_street = s.street
+  form.destination_city = s.city
+  acOpen.value = false
+  acIndex.value = -1
+}
 
 const deadlineDateMode = ref('heute')
 const deadlineDate = ref(today())
@@ -178,13 +230,14 @@ watch(() => props.order, (o) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  if (!props.order) {
-    try {
-      const cfg = await api.get('/config')
+  try {
+    const cfg = await api.get('/config')
+    suggestions.value = cfg.destination_suggestions ?? []
+    if (!props.order) {
       deadlineTime.value = cfg.default_deadline_time ?? '17:00'
-    } catch {
-      // Fallback bleibt 17:00
     }
+  } catch {
+    // Fallback bleibt 17:00
   }
 })
 
@@ -261,4 +314,20 @@ async function submit() {
 .btn-date--active { border-color: #1565c0; background: #e3f0ff; color: #1565c0; font-weight: 600; }
 .deadline-date-input { width: 100%; }
 .deadline-time-input { width: 100%; }
+
+.autocomplete-wrap { position: relative; }
+.autocomplete-wrap input { width: 100%; }
+.autocomplete-list {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+  background: #fff; border: 1px solid #d0d0d0; border-radius: 6px;
+  margin-top: 2px; list-style: none; padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto;
+}
+.autocomplete-list li {
+  padding: 8px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.autocomplete-list li:hover,
+.autocomplete-list__item--active { background: #e3f0ff; }
+.ac-name { font-size: 14px; font-weight: 600; color: #111; }
+.ac-addr { font-size: 12px; color: #666; }
 </style>

@@ -33,7 +33,7 @@ async def update_config(
         config = AppConfig(id=1)
         db.add(config)
 
-    for field, value in body.model_dump().items():
+    for field, value in body.to_db_dict().items():
         setattr(config, field, value)
 
     await db.commit()
