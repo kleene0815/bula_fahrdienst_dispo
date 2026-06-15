@@ -25,6 +25,18 @@
       <span :class="{ 'info--warn': !trip.driver }">👤 {{ trip.driver?.name ?? 'Fahrer fehlt' }}</span>
     </div>
 
+    <!-- Routing-Info (nur für geplante Fahrten) -->
+    <div v-if="trip.status === 'geplant'" class="fahrt-karte__routing">
+      <template v-if="trip.planned_start_time">
+        <span class="routing-start">
+          🕐 Start: <strong>{{ formatTime(trip.planned_start_time) }}</strong>
+          <span v-if="trip.start_time_manual_override" class="routing-badge routing-badge--manual" title="Manuell gesetzt">✋</span>
+        </span>
+        <span v-if="trip.estimated_duration_minutes" class="routing-duration">~{{ trip.estimated_duration_minutes }} min</span>
+      </template>
+      <span v-else class="routing-badge routing-badge--pending">Startzeit unbekannt</span>
+    </div>
+
     <!-- Kapazitätsindikator -->
     <div v-if="trip.status !== 'abgeschlossen' && trip.vehicle" class="kapazitaet">
       <div class="kapazitaet__bar">
@@ -225,4 +237,25 @@ function formatTime(iso) {
   color: #c62828;
   border-color: #c62828;
 }
+
+.fahrt-karte__routing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: #f5f8ff;
+  border-top: 1px solid #e8eef8;
+  font-size: 12px;
+  color: #555;
+}
+.routing-start { display: flex; align-items: center; gap: 5px; }
+.routing-duration { color: #888; }
+.routing-badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.routing-badge--manual { background: #fff3e0; color: #e65100; }
+.routing-badge--pending { background: #f5f5f5; color: #aaa; }
 </style>

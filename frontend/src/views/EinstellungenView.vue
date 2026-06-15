@@ -12,6 +12,10 @@
         <h2>App-Konfiguration</h2>
         <form @submit.prevent="saveConfig">
           <div class="field">
+            <label>Adresse des Lagerplatzes (Startpunkt für Routenberechnung)</label>
+            <input v-model="config.camp_address" type="text" placeholder="z.B. Musterstraße 1, 86150 Augsburg" />
+          </div>
+          <div class="field">
             <label>Footer-Text auf Auftragsscheinen (HTML)</label>
             <textarea v-model="config.printout_header_html" rows="6" style="font-family:monospace;font-size:12px;" />
             <small style="color:#888">Wird als HTML im Footer der Patientenbegleitscheine gerendert.</small>
@@ -36,6 +40,50 @@
             <button type="button" class="btn-ghost" style="margin-top:8px;font-size:13px" @click="addSuggestion">
               + Ziel hinzufügen
             </button>
+          </div>
+          <p v-if="configSaved" class="success">Gespeichert ✓</p>
+          <button type="submit" class="btn-primary" :disabled="configSaving">
+            {{ configSaving ? 'Wird gespeichert…' : 'Speichern' }}
+          </button>
+        </form>
+      </section>
+
+      <!-- Routenberechnung -->
+      <section class="card">
+        <h2>Routenberechnung</h2>
+        <form @submit.prevent="saveConfig">
+          <div class="field">
+            <label>OpenRouteService API-Key</label>
+            <input v-model="config.routing_api_key" type="password" placeholder="ors-…" autocomplete="off" />
+            <small style="color:#888">API-Key von <a href="https://openrouteservice.org" target="_blank">openrouteservice.org</a> (kostenlos, 2000 Anfragen/Tag)</small>
+          </div>
+          <div class="field">
+            <label>Modus</label>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button type="button" :class="config.routing_mode === 'auto' ? 'btn-primary' : 'btn-ghost'" style="font-size:13px" @click="config.routing_mode = 'auto'">⚡ Automatisch</button>
+              <button type="button" :class="config.routing_mode === 'manual' ? 'btn-primary' : 'btn-ghost'" style="font-size:13px" @click="config.routing_mode = 'manual'">✋ Manuell</button>
+            </div>
+            <small v-if="config.routing_remaining_requests !== null && config.routing_remaining_requests !== undefined" style="color:#888;display:block;margin-top:6px">
+              Verbleibende Anfragen heute: <strong>{{ config.routing_remaining_requests }}</strong>
+              <span v-if="config.routing_remaining_requests < 200" style="color:#e65100"> — Automatik deaktiviert</span>
+            </small>
+          </div>
+          <div class="field">
+            <label>Verweilzeit pro Auftragstyp (Minuten)</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px">
+              <div>
+                <small style="color:#666;display:block;margin-bottom:3px">Hinfahrt</small>
+                <input v-model.number="config.stop_duration_hinfahrt" type="number" min="0" max="120" style="width:100%" />
+              </div>
+              <div>
+                <small style="color:#666;display:block;margin-bottom:3px">Abholung</small>
+                <input v-model.number="config.stop_duration_abholung" type="number" min="0" max="120" style="width:100%" />
+              </div>
+              <div>
+                <small style="color:#666;display:block;margin-bottom:3px">Besorgung</small>
+                <input v-model.number="config.stop_duration_besorgung" type="number" min="0" max="120" style="width:100%" />
+              </div>
+            </div>
           </div>
           <p v-if="configSaved" class="success">Gespeichert ✓</p>
           <button type="submit" class="btn-primary" :disabled="configSaving">
@@ -148,6 +196,13 @@ const config = reactive({
   printout_header_html: '',
   default_deadline_time: '17:00',
   destination_suggestions: [],
+  camp_address: '',
+  routing_api_key: null,
+  routing_mode: 'auto',
+  routing_remaining_requests: null,
+  stop_duration_hinfahrt: 10,
+  stop_duration_abholung: 10,
+  stop_duration_besorgung: 15,
 })
 
 function addSuggestion() {

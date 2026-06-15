@@ -99,8 +99,8 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
   - Die Fahrtnummer auf den Patientenbegleitscheinen können auch entfallen.
 - [x] Möglichkeit schaffen, schon begonnenen Fahrten neue Aufträge hinzuzufügen. (Fahrer-Ansicht muss dann den neuen Auftrag klar kennzeichnen)
 - [x] Liste mit gängigen Zielen einführen, die dann automatisch beim erstellen eines Auftrags beim Tippen vorgeschlagen werden.
-- [ ] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
-- [ ] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.
+- [x] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
+- [x] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.
 - [ ] Warnen, wenn zwei Fahrten sich zeitlich überschneiden, aber das gleiche Auto oder den gleichen Fahrer nutzen.
 
 ### Bugs

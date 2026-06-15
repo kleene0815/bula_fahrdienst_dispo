@@ -1,22 +1,49 @@
+import logging
 import secrets
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import CurrentUser, DisponentUser, FahrerUser
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.events import broadcaster
-from app.models import Order, StatusLog, Trip, TripOrder, User, Vehicle
+from app.models import AppConfig, Order, StatusLog, Trip, TripOrder, User, Vehicle
 from app.schemas.orders import OrderOut
 from app.schemas.trips import TripCreate, TripOut, TripUpdate
+from app.services.routing import calculate_route_for_trip
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/trips", tags=["trips"])
+
+
+async def _run_route_calculation(trip_id: uuid.UUID) -> None:
+    """Background-Task: Fahrtdauer und Startzeit berechnen und per SSE broadcasten."""
+    async with AsyncSessionLocal() as db:
+        try:
+            trip = await _load_trip(db, trip_id)
+            config = await db.get(AppConfig, 1)
+            if not config or not config.routing_api_key:
+                return
+            await calculate_route_for_trip(trip, config, db)
+            await db.commit()
+            trip = await _load_trip(db, trip_id)
+            await broadcaster.broadcast("trip_updated", TripOut.from_orm_trip(trip).model_dump())
+        except Exception as exc:
+            logger.warning("Routenberechnung fehlgeschlagen (trip %s): %s", trip_id, exc)
+            async with AsyncSessionLocal() as db2:
+                trip2 = await db2.get(Trip, trip_id)
+                if trip2:
+                    trip2.estimated_duration_minutes = None
+                    if not trip2.start_time_manual_override:
+                        trip2.planned_start_time = None
+                    await db2.commit()
 
 
 def _trip_query():
@@ -110,6 +137,7 @@ async def get_trip_by_token(
 async def create_trip(
     body: TripCreate,
     current_user: DisponentUser,
+    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     if not body.order_ids:
@@ -177,6 +205,11 @@ async def create_trip(
     for old_trip_id in relocated_from:
         old_trip_obj = await _load_trip(db, old_trip_id)
         await broadcaster.broadcast("trip_updated", TripOut.from_orm_trip(old_trip_obj).model_dump())
+
+    config = await db.get(AppConfig, 1)
+    if config and config.routing_api_key and config.routing_mode == "auto":
+        background_tasks.add_task(_run_route_calculation, trip.id)
+
     return out
 
 
@@ -198,6 +231,7 @@ async def update_trip(
     trip_id: uuid.UUID,
     body: TripUpdate,
     current_user: DisponentUser,
+    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     trip = await _load_trip(db, trip_id)
@@ -213,8 +247,15 @@ async def update_trip(
         trip.vehicle_id = body.vehicle_id
     if 'notes' in fields:
         trip.notes = body.notes
+    if body.clear_start_time_override:
+        trip.start_time_manual_override = False
+        trip.planned_start_time = None
+    elif 'planned_start_time' in fields and body.planned_start_time is not None:
+        trip.planned_start_time = body.planned_start_time.replace(tzinfo=None)
+        trip.start_time_manual_override = True
 
     freed_orders: list[Order] = []
+    relocated_from: set[uuid.UUID] = set()
     if body.order_ids is not None:
         # Alte Aufträge freigeben
         old_order_ids = {to.order_id for to in trip.trip_orders}
@@ -232,7 +273,6 @@ async def update_trip(
         # Neue Aufträge hinzufügen
         orders_result = await db.execute(select(Order).where(Order.id.in_(new_order_ids - old_order_ids)))
         new_orders = list(orders_result.scalars().all())
-        relocated_from: set[uuid.UUID] = set()
         for o in new_orders:
             if o.status == "zugeteilt":
                 old_trip_id = await _detach_from_other_trip(db, o, trip_id)
@@ -274,6 +314,13 @@ async def update_trip(
     for old_trip_id in relocated_from:
         old_trip_obj = await _load_trip(db, old_trip_id)
         await broadcaster.broadcast("trip_updated", TripOut.from_orm_trip(old_trip_obj).model_dump())
+
+    orders_changed = body.order_ids is not None
+    if orders_changed and not trip.start_time_manual_override:
+        config = await db.get(AppConfig, 1)
+        if config and config.routing_api_key and config.routing_mode == "auto":
+            background_tasks.add_task(_run_route_calculation, trip_id)
+
     return out
 
 
@@ -360,6 +407,33 @@ async def complete_trip(
     trip.status = "abgeschlossen"
     db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status="aktiv", new_status="abgeschlossen", changed_by=current_user.id))
     await db.commit()
+
+    trip = await _load_trip(db, trip_id)
+    out = TripOut.from_orm_trip(trip)
+    await broadcaster.broadcast("trip_updated", out.model_dump())
+    return out
+
+
+@router.post("/{trip_id}/calculate_route", response_model=TripOut)
+async def calculate_route(
+    trip_id: uuid.UUID,
+    _: DisponentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    trip = await _load_trip(db, trip_id)
+    config = await db.get(AppConfig, 1)
+    if not config or not config.routing_api_key:
+        raise HTTPException(status_code=409, detail="Kein Routing-API-Key konfiguriert")
+
+    try:
+        await calculate_route_for_trip(trip, config, db)
+        await db.commit()
+    except Exception as exc:
+        trip.estimated_duration_minutes = None
+        if not trip.start_time_manual_override:
+            trip.planned_start_time = None
+        await db.commit()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     trip = await _load_trip(db, trip_id)
     out = TripOut.from_orm_trip(trip)

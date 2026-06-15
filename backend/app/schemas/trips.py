@@ -36,6 +36,8 @@ class TripUpdate(BaseModel):
     vehicle_id: uuid.UUID | None = None
     order_ids: list[uuid.UUID] | None = None
     notes: str | None = None
+    planned_start_time: datetime | None = None
+    clear_start_time_override: bool = False
 
 
 class TripOut(BaseModel):
@@ -47,6 +49,9 @@ class TripOut(BaseModel):
     vehicle: VehicleOut | None
     qr_token: str
     notes: str | None
+    estimated_duration_minutes: int | None
+    planned_start_time: datetime | None
+    start_time_manual_override: bool
     started_at: datetime | None
     orders: list[TripOrderOut]
     created_at: datetime
@@ -65,6 +70,9 @@ class TripOut(BaseModel):
             vehicle=VehicleOut.model_validate(trip.vehicle) if trip.vehicle else None,
             qr_token=trip.qr_token,
             notes=trip.notes,
+            estimated_duration_minutes=trip.estimated_duration_minutes,
+            planned_start_time=trip.planned_start_time,
+            start_time_manual_override=trip.start_time_manual_override,
             started_at=trip.started_at,
             orders=[
                 TripOrderOut(

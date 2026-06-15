@@ -123,6 +123,29 @@
           <p v-if="seatRatio > 1" class="error">Kapazität überschritten — Speichern nicht möglich</p>
         </section>
 
+        <!-- Startzeit -->
+        <section class="section">
+          <h4>Geplante Startzeit</h4>
+          <div class="routing-row">
+            <template v-if="trip?.planned_start_time">
+              <span class="routing-info">
+                🕐 <strong>{{ formatTime(trip.planned_start_time) }}</strong>
+                <span v-if="trip.estimated_duration_minutes"> · ~{{ trip.estimated_duration_minutes }} min</span>
+                <span v-if="trip.start_time_manual_override" class="routing-manual-badge">Manuell</span>
+              </span>
+              <button v-if="trip.start_time_manual_override" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onClearOverride">Auto</button>
+            </template>
+            <span v-else class="routing-info routing-info--muted">Noch nicht berechnet</span>
+            <button v-if="!routingCalculating" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onCalculateRoute" :disabled="!trip">🔄 Berechnen</button>
+            <span v-else style="font-size:12px;color:#888">Berechne…</span>
+          </div>
+          <div v-if="trip" style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <label style="font-size:12px;color:#666;white-space:nowrap">Manuell überschreiben:</label>
+            <input type="datetime-local" v-model="manualStartTime" style="font-size:12px;flex:1" @change="onSetManualStartTime" />
+          </div>
+          <p v-if="routingError" class="error" style="margin-top:6px">{{ routingError }}</p>
+        </section>
+
         <!-- Bemerkungen -->
         <section class="section">
           <h4>Bemerkungen</h4>
@@ -142,7 +165,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
@@ -165,6 +188,13 @@ const vehiclesStore = useVehiclesStore()
 const users = ref([])
 const saving = ref(false)
 const error = ref(null)
+const routingCalculating = ref(false)
+const routingError = ref(null)
+const manualStartTime = ref(
+  props.trip?.planned_start_time
+    ? props.trip.planned_start_time.slice(0, 16)
+    : ''
+)
 
 const form = reactive({
   name: props.trip?.name ?? '',
@@ -245,6 +275,30 @@ function formatTime(iso) {
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+async function onCalculateRoute() {
+  if (!props.trip) return
+  routingCalculating.value = true
+  routingError.value = null
+  try {
+    await tripsStore.calculateRoute(props.trip.id)
+  } catch (e) {
+    routingError.value = e.message ?? 'Berechnung fehlgeschlagen'
+  } finally {
+    routingCalculating.value = false
+  }
+}
+
+async function onSetManualStartTime() {
+  if (!props.trip || !manualStartTime.value) return
+  await tripsStore.setPlannedStartTime(props.trip.id, manualStartTime.value + ':00')
+}
+
+async function onClearOverride() {
+  if (!props.trip) return
+  await tripsStore.clearStartTimeOverride(props.trip.id)
+  manualStartTime.value = ''
+}
+
 onMounted(async () => {
   await Promise.all([
     vehiclesStore.fetchAll(),
@@ -312,4 +366,9 @@ onMounted(async () => {
 .kapazitaet__fill.over { background:#c62828; }
 .over-text { color:#c62828;font-weight:600; }
 .error { color:#c62828;font-size:13px;margin-top:4px; }
+
+.routing-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.routing-info { font-size:13px;color:#444;display:flex;align-items:center;gap:5px;flex:1; }
+.routing-info--muted { color:#aaa; }
+.routing-manual-badge { font-size:11px;background:#fff3e0;color:#e65100;padding:1px 6px;border-radius:4px; }
 </style>

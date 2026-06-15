@@ -79,6 +79,24 @@ export const useTripsStore = defineStore('trips', () => {
     return trip
   }
 
+  async function calculateRoute(tripId) {
+    const trip = await api.post(`/trips/${tripId}/calculate_route`)
+    _replace(trip)
+    return trip
+  }
+
+  async function setPlannedStartTime(tripId, isoString) {
+    const trip = await api.patch(`/trips/${tripId}`, { planned_start_time: isoString })
+    _replace(trip)
+    return trip
+  }
+
+  async function clearStartTimeOverride(tripId) {
+    const trip = await api.patch(`/trips/${tripId}`, { clear_start_time_override: true })
+    _replace(trip)
+    return trip
+  }
+
   // Vom SSE-Stream aufgerufen
   function applyEvent(eventType, data) {
     if (eventType === 'trip_created') {
@@ -101,5 +119,5 @@ export const useTripsStore = defineStore('trips', () => {
     if (idx >= 0) myTrips.value[idx] = trip
   }
 
-  return { trips, myTrips, loading, fetchAll, fetchMine, fetchByToken, create, update, start, completeStop, complete, abort, addOrder, applyEvent }
+  return { trips, myTrips, loading, fetchAll, fetchMine, fetchByToken, create, update, start, completeStop, complete, abort, addOrder, calculateRoute, setPlannedStartTime, clearStartTimeOverride, applyEvent }
 })
