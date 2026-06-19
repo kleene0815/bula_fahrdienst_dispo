@@ -127,16 +127,16 @@
         <section class="section">
           <h4>Geplante Startzeit</h4>
           <div class="routing-row">
-            <template v-if="trip?.planned_start_time">
+            <template v-if="trip?.planned_start_time || previewRoute?.planned_start_time">
               <span class="routing-info">
-                🕐 <strong>{{ formatTime(trip.planned_start_time) }}</strong>
-                <span v-if="trip.estimated_duration_minutes"> · ~{{ trip.estimated_duration_minutes }} min</span>
-                <span v-if="trip.start_time_manual_override" class="routing-manual-badge">Manuell</span>
+                🕐 <strong>{{ formatTime(trip?.planned_start_time ?? previewRoute.planned_start_time) }}</strong>
+                <span v-if="trip?.estimated_duration_minutes ?? previewRoute?.estimated_duration_minutes"> · ~{{ trip?.estimated_duration_minutes ?? previewRoute?.estimated_duration_minutes }} min</span>
+                <span v-if="trip?.start_time_manual_override" class="routing-manual-badge">Manuell</span>
               </span>
-              <button v-if="trip.start_time_manual_override" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onClearOverride">Auto</button>
+              <button v-if="trip?.start_time_manual_override" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onClearOverride">Auto</button>
             </template>
             <span v-else class="routing-info routing-info--muted">Noch nicht berechnet</span>
-            <button v-if="!routingCalculating" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onCalculateRoute" :disabled="!trip">🔄 Berechnen</button>
+            <button v-if="!routingCalculating" type="button" class="btn-ghost" style="font-size:12px;padding:3px 8px" @click="onCalculateRoute" :disabled="selectedOrderObjects.length === 0">🔄 Berechnen</button>
             <span v-else style="font-size:12px;color:#888">Berechne…</span>
           </div>
           <div v-if="trip" style="display:flex;align-items:center;gap:8px;margin-top:8px">
@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
@@ -190,11 +190,18 @@ const saving = ref(false)
 const error = ref(null)
 const routingCalculating = ref(false)
 const routingError = ref(null)
+const previewRoute = ref(null) // { planned_start_time, estimated_duration_minutes } für neue Fahrten
 const manualStartTime = ref(
   props.trip?.planned_start_time
     ? props.trip.planned_start_time.slice(0, 16)
     : ''
 )
+
+watch(
+  () => props.trip?.planned_start_time,
+  (val) => { manualStartTime.value = val ? val.slice(0, 16) : '' },
+)
+
 
 const form = reactive({
   name: props.trip?.name ?? '',
@@ -223,6 +230,31 @@ const availableOrderObjects = ref(
   selectableOrders.value.filter(
     (o) => !initialSelectedIds.includes(o.id)
   )
+)
+
+// Bei Änderungen der Auftragsreihenfolge/-auswahl Startzeit neu berechnen.
+watch(
+  selectedOrderObjects,
+  async () => {
+    if (selectedOrderObjects.value.length === 0) return
+    const orderIds = selectedOrderObjects.value.map((o) => o.id)
+    try {
+      if (props.trip) {
+        // Bestehende Fahrt: direkt speichern und neu berechnen
+        await tripsStore.update(props.trip.id, { order_ids: orderIds })
+      } else {
+        // Neue Fahrt: Preview-Berechnung ohne Speichern
+        const result = await api.post('/trips/preview_route', { order_ids: orderIds })
+        previewRoute.value = result
+        if (result.planned_start_time) {
+          manualStartTime.value = result.planned_start_time.slice(0, 16)
+        }
+      }
+    } catch {
+      // Fehler ignorieren – der Nutzer kann manuell speichern
+    }
+  },
+  { deep: true },
 )
 
 // Kapazitätsberechnung basiert auf ausgewählten Aufträgen
@@ -276,10 +308,18 @@ function formatTime(iso) {
 }
 
 async function onCalculateRoute() {
-  if (!props.trip) return
+  if (selectedOrderObjects.value.length === 0) return
   routingCalculating.value = true
   routingError.value = null
   try {
+    if (!props.trip) {
+      const result = await api.post('/trips/preview_route', {
+        order_ids: selectedOrderObjects.value.map((o) => o.id),
+      })
+      previewRoute.value = result
+      if (result.planned_start_time) manualStartTime.value = result.planned_start_time.slice(0, 16)
+      return
+    }
     await tripsStore.calculateRoute(props.trip.id)
   } catch (e) {
     routingError.value = e.message ?? 'Berechnung fehlgeschlagen'

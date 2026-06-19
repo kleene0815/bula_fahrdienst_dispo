@@ -2,6 +2,7 @@ import logging
 import secrets
 import uuid
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -133,6 +134,60 @@ async def get_trip_by_token(
     return TripOut.from_orm_trip(trip)
 
 
+class PreviewRouteBody(BaseModel):
+    order_ids: list[uuid.UUID]
+
+
+class PreviewRouteOut(BaseModel):
+    planned_start_time: datetime | None
+    estimated_duration_minutes: int | None
+
+
+@router.post("/preview_route", response_model=PreviewRouteOut)
+async def preview_route(
+    body: PreviewRouteBody,
+    current_user: DisponentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Berechnet Startzeit und Dauer für eine Auftragsfolge ohne gespeicherte Fahrt."""
+    if not body.order_ids:
+        return PreviewRouteOut(planned_start_time=None, estimated_duration_minutes=None)
+
+    config = await db.get(AppConfig, 1)
+    if not config or not config.routing_api_key or config.routing_mode != "auto":
+        return PreviewRouteOut(planned_start_time=None, estimated_duration_minutes=None)
+
+    orders_result = await db.execute(select(Order).where(Order.id.in_(body.order_ids)))
+    orders_by_id = {o.id: o for o in orders_result.scalars().all()}
+
+    fake_trip_orders = [
+        SimpleNamespace(order=orders_by_id[oid], sort_order=i + 1)
+        for i, oid in enumerate(body.order_ids)
+        if oid in orders_by_id
+    ]
+    if not fake_trip_orders:
+        return PreviewRouteOut(planned_start_time=None, estimated_duration_minutes=None)
+
+    fake_trip = SimpleNamespace(
+        trip_orders=fake_trip_orders,
+        planned_start_time=None,
+        estimated_duration_minutes=None,
+        start_time_manual_override=False,
+    )
+
+    try:
+        await calculate_route_for_trip(fake_trip, config, db)
+        await db.flush()  # config.routing_remaining_requests persistieren
+    except Exception as exc:
+        logger.warning("Preview-Routenberechnung fehlgeschlagen: %s", exc)
+        return PreviewRouteOut(planned_start_time=None, estimated_duration_minutes=None)
+
+    return PreviewRouteOut(
+        planned_start_time=fake_trip.planned_start_time,
+        estimated_duration_minutes=fake_trip.estimated_duration_minutes,
+    )
+
+
 @router.post("", response_model=TripOut, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     body: TripCreate,
@@ -208,7 +263,14 @@ async def create_trip(
 
     config = await db.get(AppConfig, 1)
     if config and config.routing_api_key and config.routing_mode == "auto":
-        background_tasks.add_task(_run_route_calculation, trip.id)
+        try:
+            await calculate_route_for_trip(trip, config, db)
+            await db.commit()
+            trip = await _load_trip(db, trip.id)
+            out = TripOut.from_orm_trip(trip)
+            await broadcaster.broadcast("trip_updated", out.model_dump())
+        except Exception as exc:
+            logger.warning("Routenberechnung fehlgeschlagen (trip %s): %s", trip.id, exc)
 
     return out
 
@@ -319,7 +381,14 @@ async def update_trip(
     if orders_changed and not trip.start_time_manual_override:
         config = await db.get(AppConfig, 1)
         if config and config.routing_api_key and config.routing_mode == "auto":
-            background_tasks.add_task(_run_route_calculation, trip_id)
+            try:
+                await calculate_route_for_trip(trip, config, db)
+                await db.commit()
+                trip = await _load_trip(db, trip_id)
+                out = TripOut.from_orm_trip(trip)
+                await broadcaster.broadcast("trip_updated", out.model_dump())
+            except Exception as exc:
+                logger.warning("Routenberechnung fehlgeschlagen (trip %s): %s", trip_id, exc)
 
     return out
 
@@ -450,6 +519,7 @@ async def add_order_to_active_trip(
     trip_id: uuid.UUID,
     body: AddOrderBody,
     current_user: DisponentUser,
+    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     trip = await _load_trip(db, trip_id)
@@ -477,6 +547,19 @@ async def add_order_to_active_trip(
     out = TripOut.from_orm_trip(trip)
     await broadcaster.broadcast("trip_updated", out.model_dump())
     await broadcaster.broadcast("order_updated", OrderOut.model_validate(order).model_dump())
+
+    if not trip.start_time_manual_override:
+        config = await db.get(AppConfig, 1)
+        if config and config.routing_api_key and config.routing_mode == "auto":
+            try:
+                await calculate_route_for_trip(trip, config, db)
+                await db.commit()
+                trip = await _load_trip(db, trip_id)
+                out = TripOut.from_orm_trip(trip)
+                await broadcaster.broadcast("trip_updated", out.model_dump())
+            except Exception as exc:
+                logger.warning("Routenberechnung fehlgeschlagen (trip %s): %s", trip_id, exc)
+
     return out
 
 

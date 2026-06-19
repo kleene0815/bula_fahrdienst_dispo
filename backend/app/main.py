@@ -1,8 +1,13 @@
+import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import config, events, orders, trips, users, vehicles
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
 app = FastAPI(title="Fahrdienst-Disposition", version="0.1.0")
 

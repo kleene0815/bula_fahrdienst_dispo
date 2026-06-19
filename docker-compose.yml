@@ -46,6 +46,7 @@ services:
       CORS_ORIGINS: '["http://localhost:5173"]'
       KEYCLOAK_SERVICE_CLIENT_ID: fahrdienst-backend
       KEYCLOAK_SERVICE_CLIENT_SECRET: fahrdienst-backend-secret
+      LOG_LEVEL: DEBUG
       # Nur für das Init-Skript beim Start – nicht in der App-Konfiguration
       KEYCLOAK_ADMIN_USER: admin
       KEYCLOAK_ADMIN_PASSWORD: admin

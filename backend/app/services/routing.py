@@ -11,6 +11,9 @@ Ablauf:
 
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+_LOCAL_TZ = ZoneInfo("Europe/Berlin")
 
 import httpx
 
@@ -100,6 +103,18 @@ async def calculate_route_for_trip(trip, config, db) -> None:
     segments = data["routes"][0]["segments"]
     # segments[0] = Camp→Stopp1, segments[1] = Stopp1→Stopp2, ..., segments[-1] = StoppN→Camp
 
+    # Debug-Ausgabe der Teilrouten
+    waypoint_labels = ["Lager"] + [to.order.destination for to in orders] + ["Lager"]
+    for i, seg in enumerate(segments):
+        logger.debug(
+            "Segment %d: %s → %s  %.1f min  %.1f km",
+            i,
+            waypoint_labels[i],
+            waypoint_labels[i + 1],
+            seg["duration"] / 60,
+            seg["distance"] / 1000,
+        )
+
     # Verweilzeiten je Auftragstyp (in Sekunden)
     def dwell(trip_type: str) -> int:
         attr = STOP_DURATIONS.get(trip_type, "stop_duration_besorgung")
@@ -111,19 +126,36 @@ async def calculate_route_for_trip(trip, config, db) -> None:
     total_seconds = total_drive_seconds + total_dwell_seconds
     trip.estimated_duration_minutes = round(total_seconds / 60)
 
-    # Startzeit: für jeden Stopp frühestmöglichsten Start rückrechnen
+    # Startzeit: rückwärts planen vom letzten Stopp
+    # latest_arrival[i] = spätester Ankunftszeitpunkt bei Stopp i, der alle
+    # nachfolgenden Deadlines noch einhält.
     if not trip.start_time_manual_override:
-        latest_starts = []
-        cumulative_seconds = 0
-        for i, to in enumerate(orders):
-            cumulative_seconds += segments[i]["duration"]  # Fahrt bis zu diesem Stopp
-            # Verweilzeiten aller vorherigen Stopps
-            dwell_so_far = sum(dwell(orders[j].order.trip_type) for j in range(i))
-            time_to_reach = cumulative_seconds + dwell_so_far
-            deadline = to.order.deadline
-            if isinstance(deadline, str):
-                deadline = datetime.fromisoformat(deadline)
-            latest_start = deadline - timedelta(seconds=time_to_reach)
-            latest_starts.append(latest_start)
+        n = len(orders)
 
-        trip.planned_start_time = min(latest_starts).replace(tzinfo=None)
+        def normalize(dt) -> datetime:
+            if isinstance(dt, str):
+                dt = datetime.fromisoformat(dt)
+            return dt
+
+        latest_arrival: list[datetime] = [None] * n  # type: ignore[list-item]
+
+        # Letzter Stopp: nur durch eigene Deadline beschränkt
+        latest_arrival[n - 1] = normalize(orders[n - 1].order.deadline)
+
+        # Rückwärts: jeder Stopp ist durch seine Deadline UND die Abfahrtszeit
+        # zum nächsten Stopp beschränkt (Verweilzeit + Fahrt)
+        for i in range(n - 2, -1, -1):
+            # segments[i+1] = Fahrt von Stopp i zu Stopp i+1
+            drive_to_next = segments[i + 1]["duration"]
+            dwell_here = dwell(orders[i].order.trip_type)
+            constraint_from_next = latest_arrival[i + 1] - timedelta(seconds=dwell_here + drive_to_next)
+            own_deadline = normalize(orders[i].order.deadline)
+            latest_arrival[i] = min(own_deadline, constraint_from_next)
+
+        # Startzeit: späteste Ankunft bei Stopp 0 minus Fahrt vom Lager
+        # segments[0] = Fahrt Lager → erster Stopp
+        # UTC → Europe/Berlin, dann tzinfo entfernen damit die DB einen naiven
+        # Lokalzeit-Wert speichert (konsistent mit manuell eingegebenen Zeiten)
+        trip.planned_start_time = (
+            latest_arrival[0] - timedelta(seconds=segments[0]["duration"])
+        ).astimezone(_LOCAL_TZ).replace(tzinfo=None)

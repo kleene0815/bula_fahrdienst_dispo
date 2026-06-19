@@ -37,12 +37,7 @@ export const useTripsStore = defineStore('trips', () => {
 
   async function update(id, data) {
     const trip = await api.patch(`/trips/${id}`, data)
-    const idx = trips.value.findIndex((t) => t.id === trip.id)
-    if (idx >= 0) {
-      trips.value[idx] = trip
-    } else {
-      trips.value.push(trip)
-    }
+    _replace(trip)
     return trip
   }
 
@@ -111,12 +106,14 @@ export const useTripsStore = defineStore('trips', () => {
 
   function _replace(trip) {
     const idx = trips.value.findIndex((t) => t.id === trip.id)
-    if (idx >= 0) trips.value[idx] = trip
+    if (idx >= 0) Object.assign(trips.value[idx], trip)
+    else trips.value.push(trip)
   }
 
   function _replaceMine(trip) {
     const idx = myTrips.value.findIndex((t) => t.id === trip.id)
-    if (idx >= 0) myTrips.value[idx] = trip
+    if (idx >= 0) Object.assign(myTrips.value[idx], trip)
+    else myTrips.value.push(trip)
   }
 
   return { trips, myTrips, loading, fetchAll, fetchMine, fetchByToken, create, update, start, completeStop, complete, abort, addOrder, calculateRoute, setPlannedStartTime, clearStartTimeOverride, applyEvent }
