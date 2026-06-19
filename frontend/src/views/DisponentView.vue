@@ -146,6 +146,9 @@ const sortedTrips = computed(() =>
   [...tripsStore.trips].sort((a, b) => {
     const statusDiff = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)
     if (statusDiff !== 0) return statusDiff
+    const aTime = a.planned_start_time ? new Date(a.planned_start_time).getTime() : Infinity
+    const bTime = b.planned_start_time ? new Date(b.planned_start_time).getTime() : Infinity
+    if (aTime !== bTime) return aTime - bTime
     return earliestDeadline(a) - earliestDeadline(b)
   })
 )

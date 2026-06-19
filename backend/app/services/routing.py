@@ -10,6 +10,7 @@ Ablauf:
 """
 
 import logging
+import math
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -120,11 +121,13 @@ async def calculate_route_for_trip(trip, config, db) -> None:
         attr = STOP_DURATIONS.get(trip_type, "stop_duration_besorgung")
         return getattr(config, attr, 15) * 60
 
-    # Gesamtdauer: alle Fahrsegmente + alle Verweilzeiten
+    # Gesamtdauer: alle Fahrsegmente + alle Verweilzeiten + Puffer
+    buffer_minutes = getattr(config, "routing_buffer_minutes", 0) or 0
     total_drive_seconds = sum(seg["duration"] for seg in segments)
     total_dwell_seconds = sum(dwell(to.order.trip_type) for to in orders)
-    total_seconds = total_drive_seconds + total_dwell_seconds
-    trip.estimated_duration_minutes = round(total_seconds / 60)
+    total_minutes_raw = total_drive_seconds / 60 + total_dwell_seconds / 60 + buffer_minutes
+    # Dauer auf 5 Minuten aufrunden
+    trip.estimated_duration_minutes = math.ceil(total_minutes_raw / 5) * 5
 
     # Startzeit: rückwärts planen vom letzten Stopp
     # latest_arrival[i] = spätester Ankunftszeitpunkt bei Stopp i, der alle
@@ -152,10 +155,13 @@ async def calculate_route_for_trip(trip, config, db) -> None:
             own_deadline = normalize(orders[i].order.deadline)
             latest_arrival[i] = min(own_deadline, constraint_from_next)
 
-        # Startzeit: späteste Ankunft bei Stopp 0 minus Fahrt vom Lager
-        # segments[0] = Fahrt Lager → erster Stopp
-        # UTC → Europe/Berlin, dann tzinfo entfernen damit die DB einen naiven
-        # Lokalzeit-Wert speichert (konsistent mit manuell eingegebenen Zeiten)
-        trip.planned_start_time = (
-            latest_arrival[0] - timedelta(seconds=segments[0]["duration"])
+        # Startzeit: späteste Ankunft bei Stopp 0 minus Fahrt vom Lager minus Puffer
+        # Auf 5 Minuten abrunden, UTC → Europe/Berlin, tzinfo entfernen
+        raw_start = (
+            latest_arrival[0]
+            - timedelta(seconds=segments[0]["duration"])
+            - timedelta(minutes=buffer_minutes)
         ).astimezone(_LOCAL_TZ).replace(tzinfo=None)
+        # Auf 5 Minuten abrunden
+        floored_minutes = (raw_start.minute // 5) * 5
+        trip.planned_start_time = raw_start.replace(minute=floored_minutes, second=0, microsecond=0)

@@ -85,6 +85,11 @@
               </div>
             </div>
           </div>
+          <div class="field">
+            <label>Puffer Startzeit (Minuten)</label>
+            <input v-model.number="config.routing_buffer_minutes" type="number" min="0" max="60" style="width:120px" />
+            <small style="color:#666;margin-left:8px">Wird von der Startzeit abgezogen und zur Fahrtdauer addiert</small>
+          </div>
           <p v-if="configSaved" class="success">Gespeichert ✓</p>
           <button type="submit" class="btn-primary" :disabled="configSaving">
             {{ configSaving ? 'Wird gespeichert…' : 'Speichern' }}
@@ -203,6 +208,7 @@ const config = reactive({
   stop_duration_hinfahrt: 10,
   stop_duration_abholung: 10,
   stop_duration_besorgung: 15,
+  routing_buffer_minutes: 0,
 })
 
 function addSuggestion() {

@@ -20,6 +20,7 @@ class AppConfigOut(BaseModel):
     stop_duration_hinfahrt: int
     stop_duration_abholung: int
     stop_duration_besorgung: int
+    routing_buffer_minutes: int
 
     model_config = {"from_attributes": True}
 
@@ -44,6 +45,7 @@ class AppConfigUpdate(BaseModel):
     stop_duration_hinfahrt: int
     stop_duration_abholung: int
     stop_duration_besorgung: int
+    routing_buffer_minutes: int
 
     def to_db_dict(self) -> dict:
         return {
@@ -59,4 +61,5 @@ class AppConfigUpdate(BaseModel):
             "stop_duration_hinfahrt": self.stop_duration_hinfahrt,
             "stop_duration_abholung": self.stop_duration_abholung,
             "stop_duration_besorgung": self.stop_duration_besorgung,
+            "routing_buffer_minutes": self.routing_buffer_minutes,
         }

@@ -29,10 +29,13 @@
     <div v-if="trip.status === 'geplant'" class="fahrt-karte__routing">
       <template v-if="trip.planned_start_time">
         <span class="routing-start">
-          🕐 Start: <strong>{{ formatTime(trip.planned_start_time) }}</strong>
+          🕐 <strong>{{ formatTime(trip.planned_start_time) }}</strong>
           <span v-if="trip.start_time_manual_override" class="routing-badge routing-badge--manual" title="Manuell gesetzt">✋</span>
         </span>
-        <span v-if="trip.estimated_duration_minutes" class="routing-duration">~{{ trip.estimated_duration_minutes }} min</span>
+        <template v-if="trip.estimated_duration_minutes">
+          <span class="routing-duration">{{ trip.estimated_duration_minutes }} min</span>
+          <span class="routing-end">🏁 <strong>{{ formatEndTime(trip.planned_start_time, trip.estimated_duration_minutes) }}</strong></span>
+        </template>
       </template>
       <span v-else class="routing-badge routing-badge--pending">Startzeit unbekannt</span>
     </div>
@@ -167,6 +170,11 @@ const canAbort = computed(() =>
 
 function formatTime(iso) {
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function formatEndTime(startIso, durationMinutes) {
+  const end = new Date(new Date(startIso).getTime() + durationMinutes * 60_000)
+  return end.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 </script>
 

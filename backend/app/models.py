@@ -134,4 +134,5 @@ class AppConfig(Base):
     stop_duration_hinfahrt: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     stop_duration_abholung: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     stop_duration_besorgung: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    routing_buffer_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(default=func.now(), onupdate=func.now())
