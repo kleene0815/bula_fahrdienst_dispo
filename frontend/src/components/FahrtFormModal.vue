@@ -15,15 +15,32 @@
         <!-- Fahrer -->
         <section class="section">
           <h4>Fahrer <span class="optional">(optional)</span></h4>
-          <div class="card-grid">
-            <button
-              v-for="u in users"
-              :key="u.id"
-              class="select-card"
-              :class="{ selected: form.driver_id === u.id }"
-              type="button"
-              @click="form.driver_id = form.driver_id === u.id ? null : u.id"
-            >{{ u.name }}</button>
+          <div class="driver-combobox" @focusout="onDriverFocusOut">
+            <button type="button" class="driver-trigger" @click="toggleDriverDropdown">
+              <span :class="{ 'driver-trigger__placeholder': !form.driver_id }">{{ selectedDriverName }}</span>
+              <span class="driver-trigger__arrow">▾</span>
+            </button>
+            <div v-if="driverDropdownOpen" class="driver-dropdown">
+              <input
+                ref="driverSearchInput"
+                v-model="driverSearch"
+                class="driver-search"
+                placeholder="Suchen…"
+                @keydown.escape="driverDropdownOpen = false"
+              />
+              <div class="driver-list">
+                <button type="button" class="driver-option" :class="{ selected: form.driver_id === null }" @click="selectDriver(null)">– kein Fahrer –</button>
+                <button
+                  v-for="u in filteredUsers"
+                  :key="u.id"
+                  type="button"
+                  class="driver-option"
+                  :class="{ selected: form.driver_id === u.id }"
+                  @click="selectDriver(u.id)"
+                >{{ u.name }}</button>
+                <p v-if="filteredUsers.length === 0" class="driver-empty">Kein Fahrer gefunden</p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -165,7 +182,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
@@ -186,6 +203,40 @@ const selectableOrders = computed(() => {
 const tripsStore = useTripsStore()
 const vehiclesStore = useVehiclesStore()
 const users = ref([])
+const driverSearch = ref('')
+const driverDropdownOpen = ref(false)
+const driverSearchInput = ref(null)
+
+const filteredUsers = computed(() => {
+  const q = driverSearch.value.trim().toLowerCase()
+  return q ? users.value.filter((u) => u.name.toLowerCase().includes(q)) : users.value
+})
+
+const selectedDriverName = computed(() => {
+  if (!form.driver_id) return '– kein Fahrer –'
+  return users.value.find((u) => u.id === form.driver_id)?.name ?? '– kein Fahrer –'
+})
+
+async function toggleDriverDropdown() {
+  driverDropdownOpen.value = !driverDropdownOpen.value
+  if (driverDropdownOpen.value) {
+    driverSearch.value = ''
+    await nextTick()
+    driverSearchInput.value?.focus()
+  }
+}
+
+function selectDriver(id) {
+  form.driver_id = id
+  driverDropdownOpen.value = false
+}
+
+function onDriverFocusOut(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    driverDropdownOpen.value = false
+  }
+}
+
 const saving = ref(false)
 const error = ref(null)
 const routingCalculating = ref(false)
@@ -406,6 +457,33 @@ onMounted(async () => {
 .kapazitaet__fill.over { background:#c62828; }
 .over-text { color:#c62828;font-weight:600; }
 .error { color:#c62828;font-size:13px;margin-top:4px; }
+
+.driver-combobox { position:relative;width:100%; }
+.driver-trigger {
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:6px;border:1px solid #ddd;
+  background:#fafafa;cursor:pointer;text-align:left;font-size:14px;
+}
+.driver-trigger:hover { border-color:#aaa; }
+.driver-trigger__placeholder { color:#aaa; }
+.driver-trigger__arrow { color:#999;font-size:11px;margin-left:8px; }
+.driver-dropdown {
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;
+  background:#fff;border:1px solid #ddd;border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);overflow:hidden;
+}
+.driver-search {
+  width:100%;box-sizing:border-box;padding:8px 12px;
+  border:none;border-bottom:1px solid #eee;font-size:13px;outline:none;
+}
+.driver-list { max-height:220px;overflow-y:auto; }
+.driver-option {
+  width:100%;display:block;padding:8px 12px;text-align:left;
+  font-size:14px;border:none;background:none;cursor:pointer;
+}
+.driver-option:hover { background:#f5f5f5; }
+.driver-option.selected { background:#e3f2fd;color:#1565c0;font-weight:500; }
+.driver-empty { font-size:12px;color:#bbb;padding:10px 12px;margin:0; }
 
 .routing-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 .routing-info { font-size:13px;color:#444;display:flex;align-items:center;gap:5px;flex:1; }
