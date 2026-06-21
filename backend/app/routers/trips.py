@@ -73,14 +73,20 @@ async def _detach_from_other_trip(
     """Löst einen Auftrag aus einer anderen geplanten Fahrt heraus.
     Gibt die ID der alten Fahrt zurück, oder None wenn keine Verschiebung möglich war."""
     result = await db.execute(select(TripOrder).where(TripOrder.order_id == order.id))
-    to = result.scalar_one_or_none()
-    if not to or to.trip_id == excluding_trip_id:
-        return None
-    old_trip = await db.get(Trip, to.trip_id)
-    if not old_trip or old_trip.status != "geplant":
-        return None
-    await db.delete(to)
-    return to.trip_id
+    all_tos = result.scalars().all()
+
+    old_trip_id = None
+    for to in all_tos:
+        if to.trip_id == excluding_trip_id:
+            continue
+        old_trip = await db.get(Trip, to.trip_id)
+        if not old_trip or old_trip.status != "geplant":
+            continue
+        if old_trip_id is None:
+            old_trip_id = to.trip_id
+        await db.delete(to)
+
+    return old_trip_id
 
 
 async def _load_trip(db: AsyncSession, trip_id: uuid.UUID) -> Trip:

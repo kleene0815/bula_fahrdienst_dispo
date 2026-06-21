@@ -1,7 +1,10 @@
 <template>
   <div
     class="fahrt-karte"
-    :class="{ 'fahrt-karte--drop-target': isDragOver && ['geplant', 'aktiv'].includes(trip.status) }"
+    :class="{
+      'fahrt-karte--drop-target': isDragOver && ['geplant', 'aktiv'].includes(trip.status),
+      'fahrt-karte--konflikt': conflict,
+    }"
     @dragover.prevent="isDragOver = ['geplant', 'aktiv'].includes(trip.status)"
     @dragleave="isDragOver = false"
     @drop="onDrop"
@@ -18,6 +21,10 @@
         <button v-if="canAbort" class="btn-icon btn-icon--ghost-muted" title="Fahrt abbrechen" @click="onAbort">✕</button>
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Drucken" @click="$emit('print')">🖨</button>
       </div>
+    </div>
+
+    <div v-if="conflict" class="fahrt-karte__konflikt-banner">
+      ⚠ {{ conflict.reason }}
     </div>
 
     <div class="fahrt-karte__info">
@@ -80,7 +87,7 @@
 import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 
-const props = defineProps({ trip: Object })
+const props = defineProps({ trip: Object, conflict: Object })
 const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
 
 const isDragOver = ref(false)
@@ -190,6 +197,21 @@ function formatEndTime(startIso, durationMinutes) {
 .fahrt-karte--drop-target {
   border-color: #1565c0;
   box-shadow: 0 0 0 2px rgba(21,101,192,.25);
+}
+.fahrt-karte--konflikt {
+  border-color: #e53935;
+  background: #fff8f8;
+}
+.fahrt-karte__konflikt-banner {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  color: #c62828;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  line-height: 1.4;
 }
 .fahrt-karte__header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .fahrt-karte__title { display: flex; align-items: center; gap: 8px; min-width: 0; }

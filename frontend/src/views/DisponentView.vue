@@ -54,6 +54,7 @@
             v-for="trip in sortedTrips"
             :key="trip.id"
             :trip="trip"
+            :conflict="tripKonflikte.get(trip.id) ?? null"
             @complete="tripsStore.complete(trip.id)"
             @abort="tripsStore.abort(trip.id)"
             @print="printTrip = trip"
@@ -152,6 +153,53 @@ const sortedTrips = computed(() =>
     return earliestDeadline(a) - earliestDeadline(b)
   })
 )
+
+const PUFFER_MINUTEN = 15
+
+function tripEndTime(trip) {
+  if (!trip.planned_start_time || !trip.estimated_duration_minutes) return null
+  return new Date(trip.planned_start_time).getTime() + trip.estimated_duration_minutes * 60_000
+}
+
+const tripKonflikte = computed(() => {
+  const aktiveTrips = tripsStore.trips.filter((t) => ['geplant', 'aktiv'].includes(t.status))
+  const konflikte = new Map() // trip.id → { reason }
+
+  for (let i = 0; i < aktiveTrips.length; i++) {
+    for (let j = 0; j < aktiveTrips.length; j++) {
+      if (i === j) continue
+      const a = aktiveTrips[i]
+      const b = aktiveTrips[j]
+      if (!a.planned_start_time || !b.planned_start_time) continue
+
+      const aStart = new Date(a.planned_start_time).getTime()
+      const bStart = new Date(b.planned_start_time).getTime()
+      if (aStart >= bStart) continue // nur a → b prüfen (a startet zuerst)
+
+      const aEnd = tripEndTime(a)
+      if (!aEnd) continue
+
+      const pufferEnde = aEnd + PUFFER_MINUTEN * 60_000
+      if (bStart >= pufferEnde) continue // genug Abstand
+
+      const gleicherFahrer = a.driver && b.driver && a.driver.id === b.driver.id
+      const gleichesFahrzeug = a.vehicle && b.vehicle && a.vehicle.id === b.vehicle.id
+      if (!gleicherFahrer && !gleichesFahrzeug) continue
+
+      const aEndFormatted = new Date(aEnd).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+      const aName = a.name || `Fahrt #${a.trip_number}`
+      const parts = []
+      if (gleicherFahrer) parts.push(`Fahrer ${a.driver.name}`)
+      if (gleichesFahrzeug) parts.push(`Fahrzeug ${a.vehicle.name}`)
+      const reason = `${parts.join(' & ')} noch bis ${aEndFormatted} in ${aName} gebunden (< ${PUFFER_MINUTEN} min Puffer)`
+
+      if (!konflikte.has(b.id) || bStart < new Date(konflikte.get(b.id)._aStart).getTime()) {
+        konflikte.set(b.id, { reason, _aStart: a.planned_start_time })
+      }
+    }
+  }
+  return konflikte
+})
 
 const filteredOrders = computed(() => {
   if (activeFilter.value === 'alle') return ordersStore.orders
