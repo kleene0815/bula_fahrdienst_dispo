@@ -9,8 +9,9 @@ Images aus der Registry und die hier beschriebenen Konfigurationsdateien.
 ## Voraussetzungen
 
 - Docker mit Compose-Plugin
-- Zugriff auf die Container-Registry (einmalig `docker login`)
 - Bestehender Keycloak-Realm (Konfigurationsschritte siehe [Keycloak-Konfiguration](#keycloak-konfiguration))
+
+Die Images sind öffentlich auf der GitHub Container Registry verfügbar — kein `docker login` zum Pullen erforderlich.
 
 ---
 
@@ -123,23 +124,8 @@ Den angezeigten Wert als `KEYCLOAK_SERVICE_CLIENT_SECRET` in die `.env` eintrage
 ```yaml
 services:
 
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    restart: unless-stopped
-
   backend:
-    image: registry.example.com/fahrdienst-backend:1.0.0
+    image: ghcr.io/kleene0815/bula_fahrdienst_dispo/backend:latest
     environment:
       DATABASE_URL: ${DATABASE_URL}
       KEYCLOAK_URL: ${KEYCLOAK_URL}
@@ -154,7 +140,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: registry.example.com/fahrdienst-frontend:1.0.0
+    image: ghcr.io/kleene0815/bula_fahrdienst_dispo/frontend:latest
     environment:
       KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM}
@@ -172,16 +158,6 @@ volumes:
 ---
 
 ## Umgebungsvariablen
-
-### PostgreSQL (`db`)
-
-| Variable | Beschreibung | Beispiel |
-|---|---|---|
-| `POSTGRES_DB` | Name der Datenbank | `fahrdienst` |
-| `POSTGRES_USER` | Datenbankbenutzer | `fahrdienst` |
-| `POSTGRES_PASSWORD` | Passwort des Datenbankbenutzers | _(sicheres Passwort)_ |
-
----
 
 ### Backend (`backend`)
 
@@ -214,11 +190,6 @@ nicht nötig.
 ## .env Beispieldatei
 
 ```dotenv
-# PostgreSQL
-POSTGRES_DB=fahrdienst
-POSTGRES_USER=fahrdienst
-POSTGRES_PASSWORD=CHANGE_ME
-
 # Datenbank-URL (muss zu den PostgreSQL-Werten passen)
 DATABASE_URL=postgresql+asyncpg://fahrdienst:CHANGE_ME@db/fahrdienst
 
@@ -255,18 +226,32 @@ Die Datenbank-Migrationen laufen automatisch beim Backend-Start.
 ### Update auf neue Version
 
 ```bash
-# Images mit neuem Tag in der Registry veröffentlichen (Entwicklungsmaschine),
-# Image-Tag in docker-compose.yml anpassen, dann auf dem Server:
+# Image-Tag in docker-compose.yml auf die neue Version setzen, dann:
 docker compose pull
 docker compose up -d
 ```
 
-## Images bauen und veröffentlichen (Entwicklungsmaschine)
+## Images veröffentlichen (GitHub Actions)
+
+Das Bauen und Pushen der Images übernimmt der GitHub Actions Workflow
+`.github/workflows/docker-publish.yml` vollautomatisch:
+
+| Auslöser | Image-Tag |
+|---|---|
+| Push auf `main` | `latest` |
+| Git-Tag `0.9.1` oder `v0.9.1` | `0.9.1` |
+
+**Neue Version veröffentlichen:**
 
 ```bash
-docker build -t registry.example.com/fahrdienst-backend:1.0.0 ./backend
-docker build -t registry.example.com/fahrdienst-frontend:1.0.0 ./frontend
-
-docker push registry.example.com/fahrdienst-backend:1.0.0
-docker push registry.example.com/fahrdienst-frontend:1.0.0
+git tag 0.9.1
+git push origin 0.9.1
 ```
+
+GitHub Actions baut dann beide Images und pusht sie nach:
+- `ghcr.io/kleene0815/bula_fahrdienst_dispo/backend:0.9.1`
+- `ghcr.io/kleene0815/bula_fahrdienst_dispo/frontend:0.9.1`
+
+> **Hinweis:** Beim ersten Push eines neuen Packages setzt GitHub die Sichtbarkeit
+> auf "private". Unter _GitHub → Packages → Package settings → Danger Zone_ muss
+> das Package einmalig auf "public" gestellt werden.
