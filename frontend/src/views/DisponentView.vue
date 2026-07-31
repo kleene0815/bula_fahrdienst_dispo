@@ -67,7 +67,8 @@
             :key="trip.id"
             :trip="trip"
             :conflict="tripKonflikte.get(trip.id) ?? null"
-            @complete="tripsStore.complete(trip.id)"
+            @start="onStartTrip(trip)"
+            @complete="onCompleteTrip(trip, $event)"
             @abort="tripsStore.abort(trip.id)"
             @print="printTrip = trip"
             @edit="editingTrip = trip; showTripForm = true"
@@ -160,8 +161,10 @@ const statusFilters = [
 const STATUS_ORDER = { aktiv: 0, geplant: 1, abgeschlossen: 2, abgebrochen: 3 }
 
 function earliestDeadline(trip) {
-  if (!trip.orders.length) return Infinity
-  return Math.min(...trip.orders.map((to) => new Date(to.order.deadline).getTime()))
+  const times = trip.orders
+    .filter((to) => to.order.deadline)
+    .map((to) => new Date(to.order.deadline).getTime())
+  return times.length ? Math.min(...times) : Infinity
 }
 
 const visibleTrips = computed(() =>
@@ -234,6 +237,12 @@ const filteredOrders = computed(() => {
     // Erwartete Rückfahrten verhalten sich wie offene Aufträge
     return ordersStore.orders.filter((o) => ['offen', 'erwartete_rueckfahrt'].includes(o.status))
   }
+  if (activeFilter.value === 'erledigt') {
+    // Zuletzt abgeschlossene Aufträge zuerst
+    return ordersStore.orders
+      .filter((o) => o.status === 'erledigt')
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+  }
   return ordersStore.orders.filter((o) => o.status === activeFilter.value)
 })
 
@@ -260,6 +269,22 @@ const stats = computed(() => ({
 function onOrderSaved() {
   showOrderForm.value = false
   editingOrder.value = null
+}
+
+async function onStartTrip(trip) {
+  try {
+    await tripsStore.start(trip.id)
+  } catch (e) {
+    alert(e.message ?? 'Fahrt konnte nicht gestartet werden')
+  }
+}
+
+async function onCompleteTrip(trip, force) {
+  try {
+    await tripsStore.complete(trip.id, force)
+  } catch (e) {
+    alert(e.message ?? 'Fahrt konnte nicht abgeschlossen werden')
+  }
 }
 
 function onOpenOrder(order) {

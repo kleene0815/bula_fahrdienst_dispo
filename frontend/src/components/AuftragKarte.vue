@@ -1,7 +1,7 @@
 <template>
   <div
     class="karte"
-    :class="[`karte--${order.priority}`, { 'karte--nicht-ziehbar': !isDraggable }]"
+    :class="[`karte--${order.priority}`, { 'karte--nicht-ziehbar': !isDraggable, 'karte--ueberfaellig': isUeberfaellig }]"
     :draggable="isDraggable"
     @dragstart="onDragStart"
     @click="$emit('open')"
@@ -44,8 +44,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useNow } from '@/composables/useNow'
 
 const props = defineProps({ order: Object })
+const now = useNow()
 const emit = defineEmits(['cancel', 'edit', 'open'])
 
 const tripTypeLabels = { besorgung: 'Besorgung', hinfahrt: 'Hinfahrt', abholung: 'Abholung' }
@@ -55,6 +57,13 @@ const statusLabel = computed(() =>
 )
 const isDraggable = ['offen', 'erwartete_rueckfahrt', 'zugeteilt'].includes(props.order.status)
 const isEditable = isDraggable
+
+// Deadline verstrichen, Auftrag aber noch nicht erledigt/storniert
+const isUeberfaellig = computed(() =>
+  props.order.deadline &&
+  !['erledigt', 'storniert'].includes(props.order.status) &&
+  new Date(props.order.deadline).getTime() < now.value
+)
 
 function onCancel() {
   if (!confirm('Auftrag wirklich stornieren?')) return
@@ -88,6 +97,9 @@ function formatDeadline(iso) {
 }
 .karte--nicht-ziehbar {
   cursor: not-allowed;
+}
+.karte--ueberfaellig {
+  background: #fdf1f1;
 }
 .karte--hoch   { border-left-color: #c62828; }
 .karte--normal { border-left-color: #1565c0; }

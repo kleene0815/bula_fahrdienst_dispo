@@ -135,6 +135,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('de-DE')
 }
 function formatDatetime(iso) {
+  if (!iso) return '–'
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 

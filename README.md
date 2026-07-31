@@ -107,10 +107,12 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Bei Hinfahrten, soll es die Möglichkeit geben, direkt auch die Rückfahrt vorzumerken
   - Es soll bei Erstellung einer Hinfahrt eine Checkbox geben, die default an ist. Wenn diese an ist, soll bei abgeschlossenem Auftrag automatisch eine Abholung als Auftrag angelegt werden
   - Der neue Auftrag soll zunächst in einem neuen Status "erwartete Rückfahrt" sein. Ansonsten soll der Status gleich behandelt werden, wie der Status offen.
-  - Die automatisch angelegte Rückfahrt hat zunächst keine Deadline; vor der Zuteilung zu einer Fahrt muss sie im Auftrag gesetzt werden.
-- [] Des Disponent soll die Möglichkeit haben, eine Fahrt abzuschließen, auch wenn nicht alle Aufträge erledigt sind. Dann soll eine Rückfrage kommen, ob die Aufträge alle abgeschlossen werden sollen.
-- [] Eine berechnete Startzeit darf nie in der Vergangenheit liegen. Aufträge, deren Deadline in der Vergangenheit liegen oder Fahrten deren Startzeitpunkt in der Vergangenheit liegen, die aber noch nicht gestartet sind, sollen leicht rot eingefärbt werden.
-- [] Wenn eine Fahrt nur Aufträge ohne Deadline hat, soll bei der Berechnung der Startzeit einfach die aktuelle Uhrzeit eingetragen werden. Es soll keine Fehlermeldung kommen.
+  - Die automatisch angelegte Rückfahrt hat zunächst keine Deadline; sie kann trotzdem einer Fahrt zugeteilt werden, die Deadline lässt sich jederzeit im Auftrag nachtragen.
+- [x] Des Disponent soll die Möglichkeit haben, eine Fahrt abzuschließen, auch wenn nicht alle Aufträge erledigt sind. Dann soll eine Rückfrage kommen, ob die Aufträge alle abgeschlossen werden sollen.
+- [x] Eine berechnete Startzeit darf nie in der Vergangenheit liegen. Aufträge, deren Deadline in der Vergangenheit liegen oder Fahrten deren Startzeitpunkt in der Vergangenheit liegen, die aber noch nicht gestartet sind, sollen leicht rot eingefärbt werden.
+- [x] Wenn eine Fahrt nur Aufträge ohne Deadline hat, soll bei der Berechnung der Startzeit einfach die aktuelle Uhrzeit eingetragen werden. Es soll keine Fehlermeldung kommen.
+- [x] Bei Filterung der Aufträge nach "Erledigt", sollte immer der zuletzt abgeschlossene Auftrag oben stehen. Ältere Aufträge dann weiter unten. 
+- [x] Der Disponent kann eine geplante Fahrt auch direkt aus der Fahrtenübersicht starten (mit Rückfrage).
 
 ### Offene Änderungswünsche
 

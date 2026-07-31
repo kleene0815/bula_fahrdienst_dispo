@@ -47,8 +47,10 @@ const completedMessage = ref(null)
 const vertretungTrip = ref(null) // Fremde Fahrt, die ein Disponent in Vertretung geöffnet hat
 
 function earliestDeadline(trip) {
-  if (!trip.orders.length) return Infinity
-  return Math.min(...trip.orders.map((to) => new Date(to.order.deadline).getTime()))
+  const times = trip.orders
+    .filter((to) => to.order.deadline)
+    .map((to) => new Date(to.order.deadline).getTime())
+  return times.length ? Math.min(...times) : Infinity
 }
 
 // Wenn via QR-Code oder Disponent-Vertretung eine spezifische Fahrt-ID übergeben wurde, diese zuerst anzeigen

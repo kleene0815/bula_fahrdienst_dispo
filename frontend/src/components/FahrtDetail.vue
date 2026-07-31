@@ -121,6 +121,7 @@ function toggleExpand(id) {
 }
 
 function formatTime(iso) {
+  if (!iso) return '–'
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 </script>

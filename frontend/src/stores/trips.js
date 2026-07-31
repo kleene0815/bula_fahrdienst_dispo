@@ -61,8 +61,8 @@ export const useTripsStore = defineStore('trips', () => {
     return trip
   }
 
-  async function complete(id) {
-    const trip = await api.post(`/trips/${id}/complete`)
+  async function complete(id, force = false) {
+    const trip = await api.post(`/trips/${id}/complete${force ? '?force=true' : ''}`)
     _replace(trip)
     _replaceMine(trip)
     return trip

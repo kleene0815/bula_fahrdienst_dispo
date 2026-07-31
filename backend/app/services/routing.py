@@ -131,16 +131,19 @@ async def calculate_route_for_trip(trip, config, db) -> None:
 
     # Startzeit: rückwärts planen vom letzten Stopp
     # latest_arrival[i] = spätester Ankunftszeitpunkt bei Stopp i, der alle
-    # nachfolgenden Deadlines noch einhält.
+    # nachfolgenden Deadlines noch einhält. Aufträge ohne Deadline (z.B.
+    # erwartete Rückfahrten) liefern keine Beschränkung.
     if not trip.start_time_manual_override:
         n = len(orders)
 
-        def normalize(dt) -> datetime:
+        def normalize(dt) -> datetime | None:
+            if dt is None:
+                return None
             if isinstance(dt, str):
                 dt = datetime.fromisoformat(dt)
             return dt
 
-        latest_arrival: list[datetime] = [None] * n  # type: ignore[list-item]
+        latest_arrival: list[datetime | None] = [None] * n
 
         # Letzter Stopp: nur durch eigene Deadline beschränkt
         latest_arrival[n - 1] = normalize(orders[n - 1].order.deadline)
@@ -151,17 +154,30 @@ async def calculate_route_for_trip(trip, config, db) -> None:
             # segments[i+1] = Fahrt von Stopp i zu Stopp i+1
             drive_to_next = segments[i + 1]["duration"]
             dwell_here = dwell(orders[i].order.trip_type)
-            constraint_from_next = latest_arrival[i + 1] - timedelta(seconds=dwell_here + drive_to_next)
+            constraint_from_next = (
+                latest_arrival[i + 1] - timedelta(seconds=dwell_here + drive_to_next)
+                if latest_arrival[i + 1] is not None
+                else None
+            )
             own_deadline = normalize(orders[i].order.deadline)
-            latest_arrival[i] = min(own_deadline, constraint_from_next)
+            candidates = [c for c in (own_deadline, constraint_from_next) if c is not None]
+            latest_arrival[i] = min(candidates) if candidates else None
 
-        # Startzeit: späteste Ankunft bei Stopp 0 minus Fahrt vom Lager minus Puffer
-        # Auf 5 Minuten abrunden, UTC → Europe/Berlin, tzinfo entfernen
-        raw_start = (
-            latest_arrival[0]
-            - timedelta(seconds=segments[0]["duration"])
-            - timedelta(minutes=buffer_minutes)
-        ).astimezone(_LOCAL_TZ).replace(tzinfo=None)
-        # Auf 5 Minuten abrunden
-        floored_minutes = (raw_start.minute // 5) * 5
-        trip.planned_start_time = raw_start.replace(minute=floored_minutes, second=0, microsecond=0)
+        now_local = datetime.now(_LOCAL_TZ).replace(second=0, microsecond=0, tzinfo=None)
+
+        if latest_arrival[0] is not None:
+            # Startzeit: späteste Ankunft bei Stopp 0 minus Fahrt vom Lager minus Puffer
+            # Auf 5 Minuten abrunden, UTC → Europe/Berlin, tzinfo entfernen
+            raw_start = (
+                latest_arrival[0]
+                - timedelta(seconds=segments[0]["duration"])
+                - timedelta(minutes=buffer_minutes)
+            ).astimezone(_LOCAL_TZ).replace(tzinfo=None)
+            floored_minutes = (raw_start.minute // 5) * 5
+            raw_start = raw_start.replace(minute=floored_minutes, second=0, microsecond=0)
+        else:
+            # Kein Stopp hat eine Deadline — Start ab jetzt
+            raw_start = now_local
+
+        # Eine berechnete Startzeit darf nie in der Vergangenheit liegen
+        trip.planned_start_time = max(raw_start, now_local)

@@ -51,12 +51,25 @@ async def _run_route_calculation(trip_id: uuid.UUID) -> None:
 PLANNABLE_STATUSES = ("offen", "erwartete_rueckfahrt")
 
 
-def _require_deadline(order: Order) -> None:
-    if order.deadline is None:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Auftrag '{order.destination}' hat noch keine Deadline — bitte zuerst im Auftrag setzen",
-        )
+def _build_return_order(order: Order, user_id: uuid.UUID) -> Order | None:
+    """Erzeugt bei erledigter Hinfahrt mit Rückfahrt-Vormerkung die zugehörige Abholung."""
+    if order.trip_type != "hinfahrt" or not order.create_return_order:
+        return None
+    return Order(
+        status="erwartete_rueckfahrt",
+        priority=order.priority,
+        trip_type="abholung",
+        destination=order.destination,
+        destination_street=order.destination_street,
+        destination_city=order.destination_city,
+        destination_type=order.destination_type,
+        deadline=None,
+        patient_name=order.patient_name,
+        phone=order.phone,
+        companion=order.companion,
+        requester_station=order.requester_station,
+        created_by=user_id,
+    )
 
 
 def _trip_query():
@@ -233,7 +246,6 @@ async def create_trip(
             relocated_from.add(old_trip_id)
         elif o.status not in PLANNABLE_STATUSES:
             raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen (Status: {o.status})")
-        _require_deadline(o)
 
     # Kapazitätsprüfung (nur wenn Fahrzeug gewählt)
     if body.vehicle_id:
@@ -364,7 +376,6 @@ async def update_trip(
             elif o.status not in PLANNABLE_STATUSES:
                 raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen")
             else:
-                _require_deadline(o)
                 old_status = o.status
                 o.status = "zugeteilt"
                 db.add(StatusLog(entity_type="order", entity_id=o.id, old_status=old_status, new_status="zugeteilt", changed_by=current_user.id))
@@ -469,23 +480,8 @@ async def complete_stop(
     db.add(StatusLog(entity_type="order", entity_id=order_id, old_status="unterwegs", new_status="erledigt", changed_by=current_user.id))
 
     # Bei erledigter Hinfahrt mit Rückfahrt-Vormerkung automatisch eine Abholung anlegen
-    return_order: Order | None = None
-    if to.order.trip_type == "hinfahrt" and to.order.create_return_order:
-        return_order = Order(
-            status="erwartete_rueckfahrt",
-            priority=to.order.priority,
-            trip_type="abholung",
-            destination=to.order.destination,
-            destination_street=to.order.destination_street,
-            destination_city=to.order.destination_city,
-            destination_type=to.order.destination_type,
-            deadline=None,
-            patient_name=to.order.patient_name,
-            phone=to.order.phone,
-            companion=to.order.companion,
-            requester_station=to.order.requester_station,
-            created_by=current_user.id,
-        )
+    return_order = _build_return_order(to.order, current_user.id)
+    if return_order is not None:
         db.add(return_order)
         await db.flush()
         db.add(StatusLog(entity_type="order", entity_id=return_order.id, old_status=None, new_status="erwartete_rueckfahrt", changed_by=current_user.id))
@@ -509,6 +505,7 @@ async def complete_trip(
     trip_id: uuid.UUID,
     current_user: FahrerUser,
     db: Annotated[AsyncSession, Depends(get_db)],
+    force: bool = False,
 ):
     trip = await _load_trip(db, trip_id)
     user_roles = {r.role for r in current_user.roles}
@@ -518,8 +515,26 @@ async def complete_trip(
         raise HTTPException(status_code=409, detail="Fahrt ist nicht aktiv")
 
     open_stops = [to for to in trip.trip_orders if to.order.status != "erledigt"]
+    force_completed_ids: list[uuid.UUID] = []
+    return_orders: list[Order] = []
     if open_stops:
-        raise HTTPException(status_code=409, detail="Nicht alle Stopps sind erledigt")
+        if not force:
+            raise HTTPException(status_code=409, detail="Nicht alle Stopps sind erledigt")
+        if "disponent" not in user_roles:
+            raise HTTPException(status_code=403, detail="Nur Disponenten können eine Fahrt mit offenen Aufträgen abschließen")
+        for to in open_stops:
+            old_status = to.order.status
+            to.order.status = "erledigt"
+            db.add(StatusLog(entity_type="order", entity_id=to.order_id, old_status=old_status, new_status="erledigt", changed_by=current_user.id))
+            force_completed_ids.append(to.order_id)
+            return_order = _build_return_order(to.order, current_user.id)
+            if return_order is not None:
+                db.add(return_order)
+                return_orders.append(return_order)
+        if return_orders:
+            await db.flush()
+            for return_order in return_orders:
+                db.add(StatusLog(entity_type="order", entity_id=return_order.id, old_status=None, new_status="erwartete_rueckfahrt", changed_by=current_user.id))
 
     trip.status = "abgeschlossen"
     db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status="aktiv", new_status="abgeschlossen", changed_by=current_user.id))
@@ -528,6 +543,12 @@ async def complete_trip(
     trip = await _load_trip(db, trip_id)
     out = TripOut.from_orm_trip(trip)
     await broadcaster.broadcast("trip_updated", out.model_dump())
+    for to in trip.trip_orders:
+        if to.order_id in force_completed_ids:
+            await broadcaster.broadcast("order_updated", OrderOut.model_validate(to.order).model_dump())
+    for return_order in return_orders:
+        await db.refresh(return_order)
+        await broadcaster.broadcast("order_created", OrderOut.model_validate(return_order).model_dump())
     return out
 
 
@@ -583,7 +604,6 @@ async def add_order_to_active_trip(
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     if order.status not in PLANNABLE_STATUSES:
         raise HTTPException(status_code=409, detail=f"Auftrag ist nicht offen (Status: {order.status})")
-    _require_deadline(order)
 
     next_sort = max((to.sort_order for to in trip.trip_orders), default=0) + 1
     db.add(TripOrder(trip_id=trip.id, order_id=order.id, sort_order=next_sort))

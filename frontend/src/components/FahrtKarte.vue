@@ -5,6 +5,7 @@
       'fahrt-karte--drop-target': isDragOver && ['geplant', 'aktiv'].includes(trip.status),
       'fahrt-karte--konflikt': conflict,
       'fahrt-karte--beendet': ['abgeschlossen', 'abgebrochen'].includes(trip.status),
+      'fahrt-karte--ueberfaellig': isUeberfaellig,
     }"
     @dragover.prevent="isDragOver = ['geplant', 'aktiv'].includes(trip.status)"
     @dragleave="isDragOver = false"
@@ -19,7 +20,8 @@
       <div class="fahrt-karte__actions">
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Bearbeiten" @click="$emit('edit')">✏</button>
         <button v-if="['geplant', 'aktiv'].includes(trip.status)" class="btn-icon btn-icon--ghost" title="Fahrer-Ansicht öffnen (Vertretung)" @click="$emit('open-fahrer')">📱</button>
-        <button v-if="canComplete" class="btn-icon btn-icon--success" title="Fahrt abschließen" @click="$emit('complete')">✓</button>
+        <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--success" title="Fahrt starten" @click="onStart">▶</button>
+        <button v-if="canComplete" class="btn-icon btn-icon--success" title="Fahrt abschließen" @click="onComplete">✓</button>
         <button v-if="canAbort" class="btn-icon btn-icon--ghost-muted" title="Fahrt abbrechen" @click="onAbort">✕</button>
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Drucken" @click="$emit('print')">🖨</button>
       </div>
@@ -78,7 +80,7 @@
         <span v-if="trip.status === 'geplant'" class="drag-handle">⠿</span>
         <span class="stopp__num">{{ index + 1 }}</span>
         <span class="stopp__ziel">{{ to.order.destination }}</span>
-        <span class="stopp__deadline">{{ formatTime(to.order.deadline) }}</span>
+        <span class="stopp__deadline">{{ to.order.deadline ? formatTime(to.order.deadline) : '–' }}</span>
         <span :class="`badge badge--${to.order.trip_type}`" style="font-size:11px">{{ to.order.trip_type }}</span>
       </div>
     </VueDraggable>
@@ -88,9 +90,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
+import { useNow } from '@/composables/useNow'
 
 const props = defineProps({ trip: Object, conflict: Object })
-const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'open-fahrer', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
+const now = useNow()
+const emit = defineEmits(['start', 'complete', 'abort', 'print', 'edit', 'open-fahrer', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
 
 const isDragOver = ref(false)
 
@@ -140,6 +144,31 @@ function onAbort() {
   emit('abort')
 }
 
+function onStart() {
+  if (!confirm(`"${props.trip.name || 'Fahrt #' + props.trip.trip_number}" starten?\n\nAlle Aufträge der Fahrt gelten dann als unterwegs, der Fahrer sieht die Fahrt als gestartet.`)) return
+  emit('start')
+}
+
+function onComplete() {
+  const openCount = props.trip.orders.filter((to) => to.order.status !== 'erledigt').length
+  if (openCount > 0) {
+    const confirmed = confirm(
+      `${openCount} Auftrag${openCount === 1 ? ' ist' : 'e sind'} noch nicht erledigt.\n\nAlle Aufträge als erledigt markieren und die Fahrt abschließen?`
+    )
+    if (!confirmed) return
+    emit('complete', true)
+  } else {
+    emit('complete', false)
+  }
+}
+
+// Noch nicht gestartete Fahrt, deren geplante Startzeit bereits verstrichen ist
+const isUeberfaellig = computed(() =>
+  props.trip.status === 'geplant' &&
+  props.trip.planned_start_time &&
+  new Date(props.trip.planned_start_time).getTime() < now.value
+)
+
 const routeCities = computed(() => {
   const seen = new Set()
   const cities = []
@@ -168,10 +197,7 @@ const seatRatio = computed(() =>
   props.trip.vehicle ? usedSeats.value / props.trip.vehicle.seats : 0
 )
 
-const canComplete = computed(() =>
-  props.trip.status === 'aktiv' &&
-  props.trip.orders.every((to) => to.order.status === 'erledigt')
-)
+const canComplete = computed(() => props.trip.status === 'aktiv')
 
 const canAbort = computed(() =>
   ['geplant', 'aktiv'].includes(props.trip.status)
@@ -199,6 +225,10 @@ function formatEndTime(startIso, durationMinutes) {
 .fahrt-karte--drop-target {
   border-color: #1565c0;
   box-shadow: 0 0 0 2px rgba(21,101,192,.25);
+}
+.fahrt-karte--ueberfaellig {
+  background: #fdf1f1;
+  border-color: #f0c4c4;
 }
 .fahrt-karte--konflikt {
   border-color: #e53935;

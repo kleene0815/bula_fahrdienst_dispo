@@ -73,7 +73,7 @@ Einzelner Auftrag. Wird ausschließlich vom Disponenten angelegt.
 | `destination` | `text` | Name des Ziels, z.B. „Apotheke am Markt" |
 | `destination_address` | `text` | Adresse des Ziels (Freitext, für Auftragsschein) |
 | `destination_type` | `text` | Enum: `apotheke`, `arzt`, `krankenhaus`, `sonstiges` |
-| `deadline` | `timestamptz` | Gewünschter Termin oder Deadline (nullable — leer bei automatisch angelegten Rückfahrten im Status `erwartete_rueckfahrt`; muss vor der Zuteilung zu einer Fahrt gesetzt werden) |
+| `deadline` | `timestamptz` | Gewünschter Termin oder Deadline (nullable — leer bei automatisch angelegten Rückfahrten im Status `erwartete_rueckfahrt`; Aufträge ohne Deadline liefern keine Beschränkung für die Startzeitberechnung) |
 | `patient_name` | `text` | Name des Patienten (nullable — leer bei Besorgungen) |
 | `phone` | `text` | Telefonnummer Patient oder Begleitperson (nullable) |
 | `companion` | `boolean` | `true` = Begleitperson fährt mit |
