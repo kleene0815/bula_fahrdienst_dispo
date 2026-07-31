@@ -4,6 +4,7 @@
     :class="{
       'fahrt-karte--drop-target': isDragOver && ['geplant', 'aktiv'].includes(trip.status),
       'fahrt-karte--konflikt': conflict,
+      'fahrt-karte--beendet': ['abgeschlossen', 'abgebrochen'].includes(trip.status),
     }"
     @dragover.prevent="isDragOver = ['geplant', 'aktiv'].includes(trip.status)"
     @dragleave="isDragOver = false"
@@ -17,6 +18,7 @@
       </div>
       <div class="fahrt-karte__actions">
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Bearbeiten" @click="$emit('edit')">✏</button>
+        <button v-if="['geplant', 'aktiv'].includes(trip.status)" class="btn-icon btn-icon--ghost" title="Fahrer-Ansicht öffnen (Vertretung)" @click="$emit('open-fahrer')">📱</button>
         <button v-if="canComplete" class="btn-icon btn-icon--success" title="Fahrt abschließen" @click="$emit('complete')">✓</button>
         <button v-if="canAbort" class="btn-icon btn-icon--ghost-muted" title="Fahrt abbrechen" @click="onAbort">✕</button>
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Drucken" @click="$emit('print')">🖨</button>
@@ -88,7 +90,7 @@ import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 
 const props = defineProps({ trip: Object, conflict: Object })
-const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
+const emit = defineEmits(['complete', 'abort', 'print', 'edit', 'open-fahrer', 'drop-order', 'reorder', 'order-moved', 'stop-drag-start', 'stop-drag-end'])
 
 const isDragOver = ref(false)
 
@@ -201,6 +203,9 @@ function formatEndTime(startIso, durationMinutes) {
 .fahrt-karte--konflikt {
   border-color: #e53935;
   background: #fff8f8;
+}
+.fahrt-karte--beendet {
+  opacity: 0.65;
 }
 .fahrt-karte__konflikt-banner {
   background: #ffebee;

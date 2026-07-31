@@ -1,16 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 export const useTripsStore = defineStore('trips', () => {
+  const auth = useAuthStore()
   const trips = ref([])
   const myTrips = ref([])
   const loading = ref(false)
 
-  async function fetchAll() {
+  async function fetchAll(includeCompleted = false) {
     loading.value = true
     try {
-      trips.value = await api.get('/trips')
+      trips.value = await api.get(includeCompleted ? '/trips?include_completed=true' : '/trips')
     } finally {
       loading.value = false
     }
@@ -18,6 +20,10 @@ export const useTripsStore = defineStore('trips', () => {
 
   async function fetchMine() {
     myTrips.value = await api.get('/trips/mine')
+  }
+
+  async function fetchOne(id) {
+    return api.get(`/trips/${id}`)
   }
 
   async function fetchByToken(qrToken) {
@@ -113,8 +119,9 @@ export const useTripsStore = defineStore('trips', () => {
   function _replaceMine(trip) {
     const idx = myTrips.value.findIndex((t) => t.id === trip.id)
     if (idx >= 0) Object.assign(myTrips.value[idx], trip)
-    else myTrips.value.push(trip)
+    // Nur eigene Fahrten neu aufnehmen — SSE-Updates fremder Fahrten gehören nicht in "Meine Fahrten"
+    else if (trip.driver?.id && trip.driver.id === auth.user?.id) myTrips.value.push(trip)
   }
 
-  return { trips, myTrips, loading, fetchAll, fetchMine, fetchByToken, create, update, start, completeStop, complete, abort, addOrder, calculateRoute, setPlannedStartTime, clearStartTimeOverride, applyEvent }
+  return { trips, myTrips, loading, fetchAll, fetchMine, fetchOne, fetchByToken, create, update, start, completeStop, complete, abort, addOrder, calculateRoute, setPlannedStartTime, clearStartTimeOverride, applyEvent }
 })

@@ -2,10 +2,14 @@
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal">
       <div class="modal__header">
-        <h3>{{ order ? 'Auftrag bearbeiten' : 'Neuer Auftrag' }}</h3>
+        <h3>
+          {{ readonly ? 'Auftragsdetails' : (order ? 'Auftrag bearbeiten' : 'Neuer Auftrag') }}
+          <span v-if="readonly && order" :class="`badge badge--${order.status}`" style="margin-left:8px">{{ statusLabel }}</span>
+        </h3>
         <button class="btn-ghost" @click="$emit('close')">✕</button>
       </div>
       <form class="modal__body" @submit.prevent="submit">
+        <fieldset :disabled="readonly" class="fields">
         <div class="field">
           <label>Auftraggeber / Station</label>
           <input v-model="form.requester_station" type="text" placeholder="z.B. Sanistation Nord" />
@@ -65,8 +69,11 @@
           <input v-model="form.destination_city" type="text" placeholder="z.B. 86150 Augsburg" />
         </div>
         <div class="field">
-          <label>Deadline / Termin *</label>
-          <div class="deadline-row">
+          <label>Deadline / Termin {{ readonly ? '' : '*' }}</label>
+          <p v-if="readonly" class="deadline-static">
+            {{ order?.deadline ? formatDeadline(order.deadline) : 'Noch keine Deadline (erwartete Rückfahrt)' }}
+          </p>
+          <div v-else class="deadline-row">
             <div class="deadline-date-btns">
               <button
                 type="button"
@@ -88,13 +95,13 @@
               v-if="deadlineDateMode === 'datum'"
               v-model="deadlineDate"
               type="date"
-              required
+              :required="!readonly"
               class="deadline-date-input"
             />
             <input
               v-model="deadlineTime"
               type="time"
-              required
+              :required="!readonly"
               class="deadline-time-input"
             />
           </div>
@@ -126,15 +133,23 @@
           </div>
         </template>
 
+        <div v-if="form.trip_type === 'hinfahrt'" class="field field--toggle">
+          <label>
+            <input v-model="form.create_return_order" type="checkbox" />
+            Rückfahrt vormerken (Abholung wird nach Erledigung automatisch angelegt)
+          </label>
+        </div>
+
         <div class="field">
           <label>Bemerkungen für den Fahrer</label>
           <textarea v-model="form.notes" rows="3"></textarea>
         </div>
 
+        </fieldset>
         <p v-if="error" class="error">{{ error }}</p>
         <div class="modal__footer">
-          <button type="button" class="btn-ghost" @click="$emit('close')">Abbrechen</button>
-          <button type="submit" class="btn-primary" :disabled="saving">
+          <button type="button" class="btn-ghost" @click="$emit('close')">{{ readonly ? 'Schließen' : 'Abbrechen' }}</button>
+          <button v-if="!readonly" type="submit" class="btn-primary" :disabled="saving">
             {{ saving ? 'Wird gespeichert…' : 'Speichern' }}
           </button>
         </div>
@@ -148,8 +163,12 @@ import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { useOrdersStore } from '@/stores/orders'
 import { api } from '@/api/client'
 
-const props = defineProps({ order: Object })
+const props = defineProps({ order: Object, readonly: Boolean })
 const emit = defineEmits(['saved', 'close'])
+
+const statusLabel = computed(() =>
+  props.order?.status === 'erwartete_rueckfahrt' ? 'erwartete Rückfahrt' : props.order?.status
+)
 const ordersStore = useOrdersStore()
 const saving = ref(false)
 const error = ref(null)
@@ -195,6 +214,7 @@ const form = reactive({
   patient_name: '',
   phone: '',
   companion: false,
+  create_return_order: true,
   notes: '',
   requester_station: '',
 })
@@ -221,13 +241,19 @@ function resolvedDeadlineDate() {
 // Beim Bearbeiten: Formular vorausfüllen
 watch(() => props.order, (o) => {
   if (!o) return
-  const d = new Date(o.deadline)
-  const pad = (n) => String(n).padStart(2, '0')
-  deadlineDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
-  deadlineTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`
-  deadlineDateMode.value = 'datum'
+  if (o.deadline) {
+    const d = new Date(o.deadline)
+    const pad = (n) => String(n).padStart(2, '0')
+    deadlineDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+    deadlineTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    deadlineDateMode.value = 'datum'
+  }
   Object.assign(form, { ...o })
 }, { immediate: true })
+
+function formatDeadline(iso) {
+  return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+}
 
 onMounted(async () => {
   try {
@@ -249,6 +275,7 @@ async function submit() {
     const payload = {
       ...form,
       deadline,
+      create_return_order: form.trip_type === 'hinfahrt' ? !!form.create_return_order : false,
       patient_name: form.trip_type === 'besorgung' ? null : (form.patient_name || null),
       phone: form.phone || null,
       destination_street: form.destination_street || null,
@@ -294,6 +321,9 @@ async function submit() {
 }
 .modal__header h3 { font-size: 16px; }
 .modal__body { padding: 20px; overflow-y: auto; flex: 1; }
+.fields { border: none; }
+.fields:disabled input, .fields:disabled select, .fields:disabled textarea { background: #f5f5f5; color: #555; }
+.deadline-static { font-size: 14px; color: #555; padding: 4px 0; }
 .modal__footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #eee; margin-top: 8px; }
 .field--toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .field--toggle input { width: auto; }

@@ -4,14 +4,16 @@
     :class="[`karte--${order.priority}`, { 'karte--nicht-ziehbar': !isDraggable }]"
     :draggable="isDraggable"
     @dragstart="onDragStart"
+    @click="$emit('open')"
   >
     <div class="karte__header">
       <span class="priority-dot" :class="`priority-dot--${order.priority}`"></span>
       <span class="karte__ziel">{{ order.destination }}</span>
-      <span :class="`badge badge--${order.status}`">{{ order.status }}</span>
+      <span :class="`badge badge--${order.status}`">{{ statusLabel }}</span>
     </div>
     <div class="karte__meta">
-      <span>{{ formatDeadline(order.deadline) }}</span>
+      <span v-if="order.deadline">{{ formatDeadline(order.deadline) }}</span>
+      <span v-else class="karte__no-deadline">⏳ Deadline offen</span>
       <span v-if="order.destination_street || order.destination_city" class="karte__addr">
         {{ [order.destination_street, order.destination_city].filter(Boolean).join(', ') }}
       </span>
@@ -24,7 +26,7 @@
       <span :class="`badge badge--${order.trip_type}`">{{ tripTypeLabel }}</span>
       <div class="karte__actions">
         <button
-          v-if="order.status === 'offen' || order.status === 'zugeteilt'"
+          v-if="isEditable"
           class="btn-icon btn-icon--primary"
           title="Bearbeiten"
           @click.stop="$emit('edit')"
@@ -41,12 +43,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({ order: Object })
-const emit = defineEmits(['cancel', 'edit'])
+const emit = defineEmits(['cancel', 'edit', 'open'])
 
 const tripTypeLabels = { besorgung: 'Besorgung', hinfahrt: 'Hinfahrt', abholung: 'Abholung' }
 const tripTypeLabel = tripTypeLabels[props.order.trip_type] ?? props.order.trip_type
-const isDraggable = ['offen', 'zugeteilt'].includes(props.order.status)
+const statusLabel = computed(() =>
+  props.order.status === 'erwartete_rueckfahrt' ? 'erwartete Rückfahrt' : props.order.status
+)
+const isDraggable = ['offen', 'erwartete_rueckfahrt', 'zugeteilt'].includes(props.order.status)
+const isEditable = isDraggable
 
 function onCancel() {
   if (!confirm('Auftrag wirklich stornieren?')) return
@@ -98,6 +106,7 @@ function formatDeadline(iso) {
 .priority-dot--gering { background: #ccc; }
 
 .karte__meta { font-size: 12px; color: #666; margin-bottom: 4px; display: flex; gap: 12px; }
+.karte__no-deadline { color: #6a1b9a; font-weight: 500; }
 .karte__addr { color: #888; }
 .karte__patient { font-size: 12px; color: #444; margin-bottom: 6px; }
 .karte__footer { display: flex; align-items: center; justify-content: space-between; }

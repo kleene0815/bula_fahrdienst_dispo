@@ -39,6 +39,7 @@ body {
   font-weight: 500;
 }
 .badge--offen      { background: #e3f2fd; color: #1565c0; }
+.badge--erwartete_rueckfahrt { background: #f3e5f5; color: #6a1b9a; }
 .badge--zugeteilt  { background: #fff3e0; color: #e65100; }
 .badge--unterwegs  { background: #fff8e1; color: #f57f17; }
 .badge--erledigt   { background: #e8f5e9; color: #2e7d32; }

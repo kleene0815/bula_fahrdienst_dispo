@@ -100,8 +100,19 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] ungefähre Dauer der Fahrt berechnen (automatische Abfrage am Routenplaner, z.B. Google-Maps)
 - [x] Startzeitpunkt der Fahrt aus Fahrtdauer zum Ziel automatisch ermitteln, Startzeit muss aber anpassbar sein.
 - [x] Warnen, wenn zwei Fahrten sich zeitlich überschneiden, aber das gleiche Auto oder den gleichen Fahrer nutzen.
+- [x] In der Dispo-Ansicht sollte bei der Auftragsliste der Standart-Filter "Offen" sein.
+- [x] In der Fahrtenliste sollte es auch die möglichkeit geben, abgeschlossene Fahrten anzuzeigen.
+- [x] Des Disponent sollte die Möglichkeit haben, in die Fahrer-Ansicht einer beliebigen Fahrt zu wechseln um in Vertretung für den Fahrer Ziele zu erledigen, oder die gesamte Fahrt als erledigt zu markieren
+- [x] Auch für nicht mehr offene Aufträge sollte eine Detail-Maske sichtbar sein, ähnlich wie der Erstellen-Dialog, allerdings nicht mehr editierbar.
+- [x] Bei Hinfahrten, soll es die Möglichkeit geben, direkt auch die Rückfahrt vorzumerken
+  - Es soll bei Erstellung einer Hinfahrt eine Checkbox geben, die default an ist. Wenn diese an ist, soll bei abgeschlossenem Auftrag automatisch eine Abholung als Auftrag angelegt werden
+  - Der neue Auftrag soll zunächst in einem neuen Status "erwartete Rückfahrt" sein. Ansonsten soll der Status gleich behandelt werden, wie der Status offen.
+  - Die automatisch angelegte Rückfahrt hat zunächst keine Deadline; vor der Zuteilung zu einer Fahrt muss sie im Auftrag gesetzt werden.
+- [] Des Disponent soll die Möglichkeit haben, eine Fahrt abzuschließen, auch wenn nicht alle Aufträge erledigt sind. Dann soll eine Rückfrage kommen, ob die Aufträge alle abgeschlossen werden sollen.
+- [] Eine berechnete Startzeit darf nie in der Vergangenheit liegen. Aufträge, deren Deadline in der Vergangenheit liegen oder Fahrten deren Startzeitpunkt in der Vergangenheit liegen, die aber noch nicht gestartet sind, sollen leicht rot eingefärbt werden.
+- [] Wenn eine Fahrt nur Aufträge ohne Deadline hat, soll bei der Berechnung der Startzeit einfach die aktuelle Uhrzeit eingetragen werden. Es soll keine Fehlermeldung kommen.
 
-### Offene Änderungswünsche 
+### Offene Änderungswünsche
 
 ### Bugs
 - [x] In der Druckansicht für Fahrten passiert beim Klick auf den Drucken-Button gar nichts. Es gibt auch keine Fehlermeldung.

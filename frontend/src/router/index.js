@@ -55,7 +55,8 @@ router.beforeEach((to) => {
   if (to.meta.requiresRole === 'disponent' && !auth.isDisponent) {
     return defaultRoute(auth)
   }
-  if (to.meta.requiresRole === 'fahrer' && !auth.isFahrer) {
+  // Disponenten dürfen die Fahrer-Ansicht öffnen (Vertretung für einen Fahrer)
+  if (to.meta.requiresRole === 'fahrer' && !auth.isFahrer && !auth.isDisponent) {
     return defaultRoute(auth)
   }
 })

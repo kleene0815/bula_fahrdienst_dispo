@@ -354,7 +354,7 @@ async function submit() {
 }
 
 function formatTime(iso) {
-  if (!iso) return ''
+  if (!iso) return 'keine Deadline'
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 

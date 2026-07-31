@@ -4,6 +4,7 @@
     <header class="topbar">
       <div class="topbar__stats">
         <span class="stat"><strong>{{ stats.offen }}</strong> offen</span>
+        <span v-if="stats.erwartet" class="stat stat--erwartet"><strong>{{ stats.erwartet }}</strong> erwartete Rückfahrt</span>
         <span class="stat"><strong>{{ stats.unterwegs }}</strong> unterwegs</span>
         <span class="stat"><strong>{{ stats.erledigt }}</strong> erledigt</span>
       </div>
@@ -38,6 +39,7 @@
             :order="order"
             @cancel="ordersStore.cancel(order.id)"
             @edit="editingOrder = order; showOrderForm = true"
+            @open="onOpenOrder(order)"
           />
           <p v-if="filteredOrders.length === 0" class="empty">Keine Aufträge</p>
         </div>
@@ -49,9 +51,19 @@
           <h2>Fahrten</h2>
           <button class="btn-primary" @click="showTripForm = true">+ Neue Fahrt</button>
         </div>
+        <div class="filter-bar">
+          <button
+            :class="['filter-btn', { active: !showFinishedTrips }]"
+            @click="showFinishedTrips = false"
+          >Aktive</button>
+          <button
+            :class="['filter-btn', { active: showFinishedTrips }]"
+            @click="showFinishedTrips = true"
+          >Alle (inkl. beendete)</button>
+        </div>
         <div class="card-list">
           <FahrtKarte
-            v-for="trip in sortedTrips"
+            v-for="trip in visibleTrips"
             :key="trip.id"
             :trip="trip"
             :conflict="tripKonflikte.get(trip.id) ?? null"
@@ -59,13 +71,14 @@
             @abort="tripsStore.abort(trip.id)"
             @print="printTrip = trip"
             @edit="editingTrip = trip; showTripForm = true"
+            @open-fahrer="router.push({ name: 'fahrer', query: { tripId: trip.id } })"
             @drop-order="onDropOrderToTrip(trip, $event)"
             @reorder="onReorderTrip(trip, $event)"
             @order-moved="onOrderMoved(trip, $event)"
             @stop-drag-start="draggingStop = $event"
             @stop-drag-end="draggingStop = null"
           />
-          <p v-if="tripsStore.trips.length === 0" class="empty">Keine aktiven Fahrten</p>
+          <p v-if="visibleTrips.length === 0" class="empty">{{ showFinishedTrips ? 'Keine Fahrten' : 'Keine aktiven Fahrten' }}</p>
           <div
             class="neue-fahrt-zone"
             :class="{ 'neue-fahrt-zone--active': dragOverNewTrip }"
@@ -83,6 +96,12 @@
       :order="editingOrder"
       @saved="onOrderSaved"
       @close="showOrderForm = false; editingOrder = null"
+    />
+    <AuftragFormModal
+      v-if="viewingOrder"
+      :order="viewingOrder"
+      readonly
+      @close="viewingOrder = null"
     />
     <FahrtFormModal
       v-if="showTripForm"
@@ -121,9 +140,11 @@ const tripsStore = useTripsStore()
 const showOrderForm = ref(false)
 const showTripForm = ref(false)
 const editingOrder = ref(null)
+const viewingOrder = ref(null)
 const editingTrip = ref(null)
 const printTrip = ref(null)
-const activeFilter = ref('alle')
+const activeFilter = ref('offen')
+const showFinishedTrips = ref(false)
 const preSelectedOrderId = ref(null)
 const dragOverNewTrip = ref(false)
 const draggingStop = ref(null) // { orderId, sourceTripId } — gesetzt während SortableJS-Drag
@@ -142,6 +163,12 @@ function earliestDeadline(trip) {
   if (!trip.orders.length) return Infinity
   return Math.min(...trip.orders.map((to) => new Date(to.order.deadline).getTime()))
 }
+
+const visibleTrips = computed(() =>
+  showFinishedTrips.value
+    ? sortedTrips.value
+    : sortedTrips.value.filter((t) => ['geplant', 'aktiv'].includes(t.status))
+)
 
 const sortedTrips = computed(() =>
   [...tripsStore.trips].sort((a, b) => {
@@ -203,11 +230,15 @@ const tripKonflikte = computed(() => {
 
 const filteredOrders = computed(() => {
   if (activeFilter.value === 'alle') return ordersStore.orders
+  if (activeFilter.value === 'offen') {
+    // Erwartete Rückfahrten verhalten sich wie offene Aufträge
+    return ordersStore.orders.filter((o) => ['offen', 'erwartete_rueckfahrt'].includes(o.status))
+  }
   return ordersStore.orders.filter((o) => o.status === activeFilter.value)
 })
 
 const openOrders = computed(() =>
-  ordersStore.orders.filter((o) => o.status === 'offen')
+  ordersStore.orders.filter((o) => ['offen', 'erwartete_rueckfahrt'].includes(o.status))
 )
 
 // Für FahrtFormModal: offene Aufträge + ggf. vorausgewählter Auftrag (auch wenn noch zugeteilt)
@@ -221,6 +252,7 @@ const tripFormOrders = computed(() => {
 
 const stats = computed(() => ({
   offen: ordersStore.orders.filter((o) => o.status === 'offen').length,
+  erwartet: ordersStore.orders.filter((o) => o.status === 'erwartete_rueckfahrt').length,
   unterwegs: ordersStore.orders.filter((o) => o.status === 'unterwegs').length,
   erledigt: ordersStore.orders.filter((o) => o.status === 'erledigt').length,
 }))
@@ -228,6 +260,15 @@ const stats = computed(() => ({
 function onOrderSaved() {
   showOrderForm.value = false
   editingOrder.value = null
+}
+
+function onOpenOrder(order) {
+  if (['offen', 'erwartete_rueckfahrt', 'zugeteilt'].includes(order.status)) {
+    editingOrder.value = order
+    showOrderForm.value = true
+  } else {
+    viewingOrder.value = order
+  }
 }
 
 function onTripSaved() {
@@ -242,14 +283,18 @@ async function onDropOrderToTrip(trip, payload) {
   const currentIds = trip.orders.map((to) => to.order.id)
   if (currentIds.includes(orderId)) return
 
-  if (tripStatus === 'aktiv') {
-    const confirmed = confirm(
-      `Die Fahrt "${trip.name || 'Fahrt #' + trip.trip_number}" ist bereits gestartet.\n\nDen Auftrag trotzdem hinzufügen? Der Fahrer sieht ihn sofort als neuen Stopp.`
-    )
-    if (!confirmed) return
-    await tripsStore.addOrder(trip.id, orderId)
-  } else {
-    await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
+  try {
+    if (tripStatus === 'aktiv') {
+      const confirmed = confirm(
+        `Die Fahrt "${trip.name || 'Fahrt #' + trip.trip_number}" ist bereits gestartet.\n\nDen Auftrag trotzdem hinzufügen? Der Fahrer sieht ihn sofort als neuen Stopp.`
+      )
+      if (!confirmed) return
+      await tripsStore.addOrder(trip.id, orderId)
+    } else {
+      await tripsStore.update(trip.id, { order_ids: [...currentIds, orderId] })
+    }
+  } catch (e) {
+    alert(e.message ?? 'Auftrag konnte nicht zugeteilt werden')
   }
 }
 
@@ -320,7 +365,7 @@ async function connectSSE() {
 }
 
 onMounted(async () => {
-  await Promise.all([ordersStore.fetchAll(), tripsStore.fetchAll()])
+  await Promise.all([ordersStore.fetchAll(), tripsStore.fetchAll(true)])
   await connectSSE()
 })
 
@@ -348,6 +393,7 @@ onUnmounted(() => {
 }
 .topbar__stats { display: flex; gap: 20px; }
 .stat { color: #555; font-size: 13px; }
+.stat--erwartet { color: #6a1b9a; }
 .topbar__user { display: flex; align-items: center; }
 
 .main-grid {

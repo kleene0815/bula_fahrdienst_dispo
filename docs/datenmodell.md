@@ -67,16 +67,17 @@ Einzelner Auftrag. Wird ausschließlich vom Disponenten angelegt.
 | Spalte | Typ | Beschreibung |
 |---|---|---|
 | `id` | `uuid` PK | |
-| `status` | `text` | Enum: `offen`, `zugeteilt`, `unterwegs`, `erledigt`, `storniert` |
+| `status` | `text` | Enum: `offen`, `erwartete_rueckfahrt`, `zugeteilt`, `unterwegs`, `erledigt`, `storniert` |
 | `priority` | `text` | Enum: `gering`, `normal`, `hoch` |
 | `trip_type` | `text` | Enum: `besorgung`, `hinfahrt`, `abholung` |
 | `destination` | `text` | Name des Ziels, z.B. „Apotheke am Markt" |
 | `destination_address` | `text` | Adresse des Ziels (Freitext, für Auftragsschein) |
 | `destination_type` | `text` | Enum: `apotheke`, `arzt`, `krankenhaus`, `sonstiges` |
-| `deadline` | `timestamptz` | Gewünschter Termin oder Deadline |
+| `deadline` | `timestamptz` | Gewünschter Termin oder Deadline (nullable — leer bei automatisch angelegten Rückfahrten im Status `erwartete_rueckfahrt`; muss vor der Zuteilung zu einer Fahrt gesetzt werden) |
 | `patient_name` | `text` | Name des Patienten (nullable — leer bei Besorgungen) |
 | `phone` | `text` | Telefonnummer Patient oder Begleitperson (nullable) |
 | `companion` | `boolean` | `true` = Begleitperson fährt mit |
+| `create_return_order` | `boolean` | Nur bei `trip_type = 'hinfahrt'`: `true` = beim Erledigen wird automatisch eine Abholung im Status `erwartete_rueckfahrt` angelegt |
 | `notes` | `text` | Bemerkungen für den Fahrer (nullable) |
 | `requester_station` | `text` | Auftraggeber, z.B. „Sanistation Nord" (nullable) |
 | `created_by` | `uuid` FK → `users.id` | Disponent, der den Auftrag angelegt hat |

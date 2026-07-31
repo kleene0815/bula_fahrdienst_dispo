@@ -15,6 +15,7 @@ class OrderCreate(BaseModel):
     patient_name: str | None = None
     phone: str | None = None
     companion: bool = False
+    create_return_order: bool = False
     notes: str | None = None
     requester_station: str | None = None
 
@@ -36,6 +37,7 @@ class OrderUpdate(BaseModel):
     patient_name: str | None = None
     phone: str | None = None
     companion: bool | None = None
+    create_return_order: bool | None = None
     notes: str | None = None
     requester_station: str | None = None
 
@@ -49,10 +51,11 @@ class OrderOut(BaseModel):
     destination_street: str | None
     destination_city: str | None
     destination_type: str
-    deadline: datetime
+    deadline: datetime | None
     patient_name: str | None
     phone: str | None
     companion: bool
+    create_return_order: bool
     notes: str | None
     requester_station: str | None
     created_by: uuid.UUID

@@ -13,7 +13,7 @@ from app.schemas.orders import OrderCreate, OrderOut, OrderUpdate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-VALID_STATUSES = {"offen", "zugeteilt", "unterwegs", "erledigt", "storniert"}
+VALID_STATUSES = {"offen", "erwartete_rueckfahrt", "zugeteilt", "unterwegs", "erledigt", "storniert"}
 
 
 @router.get("", response_model=list[OrderOut])
@@ -75,7 +75,7 @@ async def update_order(
     order = await db.get(Order, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
-    if order.status not in ("offen", "zugeteilt"):
+    if order.status not in ("offen", "erwartete_rueckfahrt", "zugeteilt"):
         raise HTTPException(status_code=409, detail="Auftrag kann in diesem Status nicht bearbeitet werden")
 
     for field, value in body.model_dump(exclude_none=True).items():

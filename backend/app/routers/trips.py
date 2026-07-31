@@ -47,6 +47,18 @@ async def _run_route_calculation(trip_id: uuid.UUID) -> None:
                     await db2.commit()
 
 
+# Status, in denen ein Auftrag einer Fahrt zugeteilt werden darf
+PLANNABLE_STATUSES = ("offen", "erwartete_rueckfahrt")
+
+
+def _require_deadline(order: Order) -> None:
+    if order.deadline is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Auftrag '{order.destination}' hat noch keine Deadline — bitte zuerst im Auftrag setzen",
+        )
+
+
 def _trip_query():
     return select(Trip).options(
         selectinload(Trip.driver).selectinload(User.roles),
@@ -219,8 +231,9 @@ async def create_trip(
             if old_trip_id is None:
                 raise HTTPException(status_code=409, detail=f"Auftrag {o.id} kann nicht zugeteilt werden (Status: {o.status})")
             relocated_from.add(old_trip_id)
-        elif o.status != "offen":
+        elif o.status not in PLANNABLE_STATUSES:
             raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen (Status: {o.status})")
+        _require_deadline(o)
 
     # Kapazitätsprüfung (nur wenn Fahrzeug gewählt)
     if body.vehicle_id:
@@ -252,8 +265,9 @@ async def create_trip(
 
     for o in orders:
         if o.status != "zugeteilt":
+            old_status = o.status
             o.status = "zugeteilt"
-            db.add(StatusLog(entity_type="order", entity_id=o.id, old_status="offen", new_status="zugeteilt", changed_by=current_user.id))
+            db.add(StatusLog(entity_type="order", entity_id=o.id, old_status=old_status, new_status="zugeteilt", changed_by=current_user.id))
 
     db.add(StatusLog(entity_type="trip", entity_id=trip.id, old_status=None, new_status="geplant", changed_by=current_user.id))
     await db.commit()
@@ -347,11 +361,13 @@ async def update_trip(
                 if old_trip_id is None:
                     raise HTTPException(status_code=409, detail=f"Auftrag {o.id} kann nicht verschoben werden")
                 relocated_from.add(old_trip_id)
-            elif o.status != "offen":
+            elif o.status not in PLANNABLE_STATUSES:
                 raise HTTPException(status_code=409, detail=f"Auftrag {o.id} ist nicht offen")
             else:
+                _require_deadline(o)
+                old_status = o.status
                 o.status = "zugeteilt"
-                db.add(StatusLog(entity_type="order", entity_id=o.id, old_status="offen", new_status="zugeteilt", changed_by=current_user.id))
+                db.add(StatusLog(entity_type="order", entity_id=o.id, old_status=old_status, new_status="zugeteilt", changed_by=current_user.id))
 
         # Reihenfolge neu setzen
         await db.flush()
@@ -451,6 +467,29 @@ async def complete_stop(
 
     to.order.status = "erledigt"
     db.add(StatusLog(entity_type="order", entity_id=order_id, old_status="unterwegs", new_status="erledigt", changed_by=current_user.id))
+
+    # Bei erledigter Hinfahrt mit Rückfahrt-Vormerkung automatisch eine Abholung anlegen
+    return_order: Order | None = None
+    if to.order.trip_type == "hinfahrt" and to.order.create_return_order:
+        return_order = Order(
+            status="erwartete_rueckfahrt",
+            priority=to.order.priority,
+            trip_type="abholung",
+            destination=to.order.destination,
+            destination_street=to.order.destination_street,
+            destination_city=to.order.destination_city,
+            destination_type=to.order.destination_type,
+            deadline=None,
+            patient_name=to.order.patient_name,
+            phone=to.order.phone,
+            companion=to.order.companion,
+            requester_station=to.order.requester_station,
+            created_by=current_user.id,
+        )
+        db.add(return_order)
+        await db.flush()
+        db.add(StatusLog(entity_type="order", entity_id=return_order.id, old_status=None, new_status="erwartete_rueckfahrt", changed_by=current_user.id))
+
     await db.commit()
 
     trip = await _load_trip(db, trip_id)
@@ -459,6 +498,9 @@ async def complete_stop(
     completed_to = next((x for x in trip.trip_orders if x.order_id == order_id), None)
     if completed_to:
         await broadcaster.broadcast("order_updated", OrderOut.model_validate(completed_to.order).model_dump())
+    if return_order is not None:
+        await db.refresh(return_order)
+        await broadcaster.broadcast("order_created", OrderOut.model_validate(return_order).model_dump())
     return out
 
 
@@ -539,14 +581,16 @@ async def add_order_to_active_trip(
     order = await db.get(Order, body.order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
-    if order.status != "offen":
+    if order.status not in PLANNABLE_STATUSES:
         raise HTTPException(status_code=409, detail=f"Auftrag ist nicht offen (Status: {order.status})")
+    _require_deadline(order)
 
     next_sort = max((to.sort_order for to in trip.trip_orders), default=0) + 1
     db.add(TripOrder(trip_id=trip.id, order_id=order.id, sort_order=next_sort))
 
+    old_status = order.status
     order.status = "unterwegs"
-    db.add(StatusLog(entity_type="order", entity_id=order.id, old_status="offen", new_status="unterwegs", changed_by=current_user.id))
+    db.add(StatusLog(entity_type="order", entity_id=order.id, old_status=old_status, new_status="unterwegs", changed_by=current_user.id))
 
     await db.commit()
     trip = await _load_trip(db, trip_id)
