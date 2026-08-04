@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,6 +15,7 @@ from app.auth import CurrentUser, DisponentUser, FahrerUser
 from app.database import get_db, AsyncSessionLocal
 from app.events import broadcaster
 from app.models import AppConfig, Order, StatusLog, Trip, TripOrder, User, Vehicle
+from app.schemas.history import HistoryEntryOut
 from app.schemas.orders import OrderOut
 from app.schemas.trips import TripCreate, TripOut, TripUpdate
 from app.services.routing import calculate_route_for_trip
@@ -662,6 +663,51 @@ async def abort_trip(
         if to.order.status == "offen":
             await broadcaster.broadcast("order_updated", OrderOut.model_validate(to.order).model_dump())
     return out
+
+
+@router.get("/{trip_id}/history", response_model=list[HistoryEntryOut])
+async def get_trip_history(
+    trip_id: uuid.UUID,
+    _: DisponentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    trip = await _load_trip(db, trip_id)
+    # Erledigte und nachträglich hinzugefügte Stopps der Fahrt erscheinen ebenfalls
+    # in der Historie. Nachträglich hinzugefügt = Sprung von offen/erwartete_rueckfahrt
+    # direkt auf unterwegs (beim Fahrtstart gehen Aufträge von zugeteilt auf unterwegs).
+    destination_by_order_id = {to.order_id: to.order.destination for to in trip.trip_orders}
+    result = await db.execute(
+        select(StatusLog, User.name)
+        .join(User, StatusLog.changed_by == User.id)
+        .where(
+            or_(
+                and_(StatusLog.entity_type == "trip", StatusLog.entity_id == trip_id),
+                and_(
+                    StatusLog.entity_type == "order",
+                    StatusLog.entity_id.in_(destination_by_order_id.keys()),
+                    or_(
+                        StatusLog.new_status == "erledigt",
+                        and_(
+                            StatusLog.new_status == "unterwegs",
+                            StatusLog.old_status.in_(PLANNABLE_STATUSES),
+                        ),
+                    ),
+                ),
+            )
+        )
+        .order_by(StatusLog.changed_at.desc())
+    )
+    return [
+        HistoryEntryOut(
+            old_status=log.old_status,
+            new_status=log.new_status,
+            changed_by_name=name,
+            changed_at=log.changed_at,
+            note=log.note,
+            destination=destination_by_order_id.get(log.entity_id) if log.entity_type == "order" else None,
+        )
+        for log, name in result.all()
+    ]
 
 
 @router.get("/{trip_id}/printout")

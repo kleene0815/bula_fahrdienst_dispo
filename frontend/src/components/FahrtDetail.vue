@@ -55,7 +55,7 @@
           <!-- Detailansicht (aufklappbar) -->
           <div v-if="expanded.has(to.order.id)" class="stopp-item__details">
             <p v-if="to.order.destination_street || to.order.destination_city" class="detail-row">
-              📍 {{ [to.order.destination_street, to.order.destination_city].filter(Boolean).join(', ') }}
+              📍 <a :href="mapsUrl(orderAddress(to.order))" target="_blank" rel="noopener">{{ [to.order.destination_street, to.order.destination_city].filter(Boolean).join(', ') }}</a>
             </p>
             <template v-if="to.order.patient_name">
               <p class="detail-row">👤 {{ to.order.patient_name }}<span v-if="to.order.companion"> + Begleitperson</span></p>
@@ -79,11 +79,14 @@
       </li>
 
       <!-- Rückfahrt-Element -->
-      <li v-if="allStopsDone && trip.status === 'aktiv'" class="stopp-item stopp-item--rueckfahrt">
+      <li class="stopp-item stopp-item--rueckfahrt">
         <div class="stopp-item__circle stopp-item__circle--home">🏕</div>
         <div class="stopp-item__content">
-          <strong>Rückfahrt zum Lager</strong>
-          <button class="btn-success" style="margin-top:10px;width:100%" @click="$emit('complete')">
+          <strong>Rückfahrt zum Lagerplatz</strong>
+          <p v-if="campAddress" class="detail-row" style="margin-top:4px">
+            📍 <a :href="mapsUrl(campAddress)" target="_blank" rel="noopener">{{ campAddress }}</a>
+          </p>
+          <button v-if="allStopsDone && trip.status === 'aktiv'" class="btn-success" style="margin-top:10px;width:100%" @click="$emit('complete')">
             Fahrt abschließen ✓
           </button>
         </div>
@@ -93,13 +96,33 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { api } from '@/api/client'
 
 const props = defineProps({ trip: Object })
 defineEmits(['start', 'complete-stop', 'complete'])
 
 const expanded = reactive(new Set())
 const completed = ref(false)
+const campAddress = ref('')
+
+onMounted(async () => {
+  try {
+    const cfg = await api.get('/config/public')
+    campAddress.value = cfg.camp_address ?? ''
+  } catch {
+    campAddress.value = ''
+  }
+})
+
+function orderAddress(order) {
+  return [order.destination_street, order.destination_city].filter(Boolean).join(', ')
+}
+
+// Öffnet auf dem Handy die Karten-/Navi-App (plattformneutral via Google-Maps-URL)
+function mapsUrl(address) {
+  return `https://maps.google.com/?q=${encodeURIComponent(address)}`
+}
 
 const allStopsDone = computed(() =>
   props.trip.orders.every((to) => to.order.status === 'erledigt')

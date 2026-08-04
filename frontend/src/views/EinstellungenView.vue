@@ -5,15 +5,29 @@
       <h1>Einstellungen</h1>
     </header>
 
+    <nav class="tab-bar">
+      <button
+        v-for="t in tabs"
+        :key="t.value"
+        :class="['tab-btn', { active: activeTab === t.value }]"
+        @click="activeTab = t.value"
+      >{{ t.label }}</button>
+    </nav>
+
     <div class="einstellungen-body">
 
       <!-- App-Konfiguration -->
-      <section class="card">
+      <section v-if="activeTab === 'allgemein'" class="card">
         <h2>App-Konfiguration</h2>
         <form @submit.prevent="saveConfig">
           <div class="field">
             <label>Adresse des Lagerplatzes (Startpunkt für Routenberechnung)</label>
             <input v-model="config.camp_address" type="text" placeholder="z.B. Musterstraße 1, 86150 Augsburg" />
+          </div>
+          <div class="field">
+            <label>Telefonnummer der Sicherheitszentrale</label>
+            <input v-model="config.security_center_phone" type="tel" placeholder="z.B. 0171 1234567" />
+            <small style="color:#888">Wird dem Fahrer in seiner Ansicht dauerhaft angezeigt.</small>
           </div>
           <div class="field">
             <label>Footer-Text auf Auftragsscheinen (HTML)</label>
@@ -49,7 +63,7 @@
       </section>
 
       <!-- Routenberechnung -->
-      <section class="card">
+      <section v-if="activeTab === 'routing'" class="card">
         <h2>Routenberechnung</h2>
         <form @submit.prevent="saveConfig">
           <div class="field">
@@ -97,8 +111,52 @@
         </form>
       </section>
 
+      <!-- Fahrerverwaltung -->
+      <section v-if="activeTab === 'fahrer'" class="card">
+        <h2>Fahrer</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:12px">
+          Fahrer werden aus Keycloak synchronisiert. Die Telefonnummer wird lokal gespeichert.
+        </p>
+        <table class="vehicle-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>E-Mail</th>
+              <th>Telefonnummer</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in drivers" :key="d.id">
+              <td>{{ d.name }}</td>
+              <td>{{ d.email || '–' }}</td>
+              <td>
+                <input
+                  v-model="d.phone"
+                  type="tel"
+                  placeholder="z.B. 0171 1234567"
+                  style="font-size:13px;width:100%"
+                />
+              </td>
+              <td style="white-space:nowrap">
+                <button
+                  class="btn-ghost"
+                  style="font-size:12px;padding:3px 8px"
+                  :disabled="savingDriverId === d.id"
+                  @click="saveDriverPhone(d)"
+                >{{ savingDriverId === d.id ? '…' : 'Speichern' }}</button>
+                <span v-if="savedDriverId === d.id" class="success" style="margin-left:6px">✓</span>
+              </td>
+            </tr>
+            <tr v-if="drivers.length === 0">
+              <td colspan="4" style="color:#aaa">Keine Fahrer gefunden</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- Fahrzeugverwaltung -->
-      <section class="card">
+      <section v-if="activeTab === 'fahrzeuge'" class="card">
         <div class="card__header">
           <h2>Fahrzeuge</h2>
           <button class="btn-primary" @click="openNewVehicleForm">+ Neues Fahrzeug</button>
@@ -190,6 +248,18 @@ import { api } from '@/api/client'
 const router = useRouter()
 const vehiclesStore = useVehiclesStore()
 
+const tabs = [
+  { value: 'allgemein', label: 'Allgemein' },
+  { value: 'routing', label: 'Routenberechnung' },
+  { value: 'fahrer', label: 'Fahrer' },
+  { value: 'fahrzeuge', label: 'Fahrzeuge' },
+]
+const activeTab = ref('allgemein')
+
+const drivers = ref([])
+const savingDriverId = ref(null)
+const savedDriverId = ref(null)
+
 const allVehicles = ref([])
 const showVehicleForm = ref(false)
 const editingVehicle = ref(null)
@@ -202,6 +272,7 @@ const config = reactive({
   default_deadline_time: '17:00',
   destination_suggestions: [],
   camp_address: '',
+  security_center_phone: '',
   routing_api_key: null,
   routing_mode: 'auto',
   routing_remaining_requests: null,
@@ -283,8 +354,27 @@ async function loadVehicles() {
   allVehicles.value = await api.get('/vehicles?active_only=false')
 }
 
+async function loadDrivers() {
+  drivers.value = await api.get('/users')
+}
+
+async function saveDriverPhone(driver) {
+  savingDriverId.value = driver.id
+  savedDriverId.value = null
+  try {
+    const updated = await api.patch(`/users/${driver.id}`, { phone: driver.phone })
+    driver.phone = updated.phone
+    savedDriverId.value = driver.id
+    setTimeout(() => { if (savedDriverId.value === driver.id) savedDriverId.value = null }, 3000)
+  } catch (e) {
+    alert(e.message ?? 'Speichern fehlgeschlagen')
+  } finally {
+    savingDriverId.value = null
+  }
+}
+
 onMounted(async () => {
-  const [cfg] = await Promise.all([api.get('/config'), loadVehicles()])
+  const [cfg] = await Promise.all([api.get('/config'), loadVehicles(), loadDrivers()])
   Object.assign(config, cfg)
 })
 </script>
@@ -294,6 +384,25 @@ onMounted(async () => {
 .einstellungen-header { display:flex;align-items:center;gap:16px;padding:14px 24px;background:#fff;border-bottom:1px solid #e0e0e0; }
 .einstellungen-header h1 { font-size:18px; }
 .einstellungen-body { max-width:760px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:24px; }
+
+.tab-bar {
+  display:flex;gap:4px;
+  max-width:760px;margin:0 auto;padding:16px 24px 0;
+}
+.tab-btn {
+  background:transparent;
+  border:1px solid #ddd;
+  border-radius:12px;
+  padding:5px 14px;
+  font-size:13px;
+  color:#555;
+  cursor:pointer;
+}
+.tab-btn.active {
+  background:#1565c0;
+  color:#fff;
+  border-color:#1565c0;
+}
 
 .card { background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08); }
 .card h2 { font-size:16px;margin-bottom:16px; }

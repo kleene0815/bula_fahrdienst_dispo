@@ -113,7 +113,13 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Wenn eine Fahrt nur Aufträge ohne Deadline hat, soll bei der Berechnung der Startzeit einfach die aktuelle Uhrzeit eingetragen werden. Es soll keine Fehlermeldung kommen.
 - [x] Bei Filterung der Aufträge nach "Erledigt", sollte immer der zuletzt abgeschlossene Auftrag oben stehen. Ältere Aufträge dann weiter unten. 
 - [x] Der Disponent kann eine geplante Fahrt auch direkt aus der Fahrtenübersicht starten (mit Rückfrage).
-
+- [x] Fahrer mit Kontaktdaten hinterlegen
+  - Fahrer-Kontaktdaten sollen in der lokalen Datenbank abgelegt werden.
+  - Es soll in den Einstellungen durch den Disponenten die Telefonnummer des Fahrers erfasst werden können. In dem Zuge können die Verschiedenen Einstellungs-Abschnitte in unterschiedlichen Seiten/Tabs aufgeteilt werden.
+  - In der Fahrer-Ansicht soll, wenn für den Fahrer noch keine Telefonnummer hinterlegt ist, eine rote Box erscheinen, in der der FAhrer seine Telefonnummer angeben kann.
+- [x] Geo-Link für Zieladresse, damit auf dem Handy direkt die Navi-App geöffnet werden kann.
+- [x] Änderungshistorie für Aufträge und Fahrten (Wer hat wann welchen Status verändert.)
+- [x] Beim Auftragsschein soll als letzes Ziel wieder der Lagerplatz angezeigt werden (auch in der Fahrer-Ansicht)
 ### Offene Änderungswünsche
 
 ### Bugs

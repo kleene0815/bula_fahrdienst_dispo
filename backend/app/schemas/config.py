@@ -14,6 +14,7 @@ class AppConfigOut(BaseModel):
     default_deadline_time: str
     destination_suggestions: list[DestinationSuggestion]
     camp_address: str
+    security_center_phone: str
     routing_api_key: str | None
     routing_mode: str
     routing_remaining_requests: int | None
@@ -40,6 +41,7 @@ class AppConfigUpdate(BaseModel):
     default_deadline_time: str
     destination_suggestions: list[DestinationSuggestion]
     camp_address: str
+    security_center_phone: str = ""
     routing_api_key: str | None = None
     routing_mode: str
     stop_duration_hinfahrt: int
@@ -56,6 +58,7 @@ class AppConfigUpdate(BaseModel):
                 ensure_ascii=False,
             ),
             "camp_address": self.camp_address,
+            "security_center_phone": self.security_center_phone,
             "routing_api_key": self.routing_api_key,
             "routing_mode": self.routing_mode,
             "stop_duration_hinfahrt": self.stop_duration_hinfahrt,

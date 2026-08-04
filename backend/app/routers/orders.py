@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import DisponentUser
 from app.database import get_db
 from app.events import broadcaster
-from app.models import Order, StatusLog, TripOrder
+from app.models import Order, StatusLog, TripOrder, User
+from app.schemas.history import HistoryEntryOut
 from app.schemas.orders import OrderCreate, OrderOut, OrderUpdate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -63,6 +64,33 @@ async def get_order(
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     return order
+
+
+@router.get("/{order_id}/history", response_model=list[HistoryEntryOut])
+async def get_order_history(
+    order_id: uuid.UUID,
+    _: DisponentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    result = await db.execute(
+        select(StatusLog, User.name)
+        .join(User, StatusLog.changed_by == User.id)
+        .where(StatusLog.entity_type == "order", StatusLog.entity_id == order_id)
+        .order_by(StatusLog.changed_at.desc())
+    )
+    return [
+        HistoryEntryOut(
+            old_status=log.old_status,
+            new_status=log.new_status,
+            changed_by_name=name,
+            changed_at=log.changed_at,
+            note=log.note,
+        )
+        for log, name in result.all()
+    ]
 
 
 @router.patch("/{order_id}", response_model=OrderOut)

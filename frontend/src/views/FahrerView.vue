@@ -8,6 +8,22 @@
       </div>
     </header>
 
+    <div v-if="securityPhone" class="security-bar">
+      🛡 Sicherheitszentrale: <a :href="`tel:${securityPhone}`">{{ securityPhone }}</a>
+    </div>
+
+    <div v-if="needsPhone" class="phone-box">
+      <strong>📞 Telefonnummer fehlt</strong>
+      <p>Damit dich die Disposition erreichen kann, hinterlege bitte deine Telefonnummer.</p>
+      <form class="phone-box__form" @submit.prevent="savePhone">
+        <input v-model="phoneInput" type="tel" placeholder="z.B. 0171 1234567" required />
+        <button type="submit" class="btn-primary" :disabled="phoneSaving">
+          {{ phoneSaving ? 'Speichern…' : 'Speichern' }}
+        </button>
+      </form>
+      <p v-if="phoneError" class="phone-box__error">{{ phoneError }}</p>
+    </div>
+
     <div v-if="loading" class="loading-screen">Laden…</div>
 
     <div v-else-if="activeTrip" class="fahrt-detail">
@@ -71,6 +87,27 @@ const isVertretung = computed(() =>
   activeTrip.value != null && activeTrip.value.driver?.id !== auth.user?.id
 )
 
+// Rote Box, solange der eingeloggte Fahrer keine Telefonnummer hinterlegt hat
+const phoneInput = ref('')
+const phoneSaving = ref(false)
+const phoneError = ref(null)
+
+const needsPhone = computed(() =>
+  auth.isFahrer && auth.user != null && !auth.user.phone
+)
+
+async function savePhone() {
+  phoneSaving.value = true
+  phoneError.value = null
+  try {
+    auth.user = await api.patch('/users/me', { phone: phoneInput.value })
+  } catch (e) {
+    phoneError.value = e.message ?? 'Speichern fehlgeschlagen'
+  } finally {
+    phoneSaving.value = false
+  }
+}
+
 async function load() {
   loading.value = true
   await tripsStore.fetchMine()
@@ -108,8 +145,20 @@ async function onComplete() {
   await tripsStore.fetchMine()
 }
 
+// Telefonnummer der Sicherheitszentrale — unabhängig von Fahraufträgen immer sichtbar
+const securityPhone = ref('')
+
+async function loadSecurityPhone() {
+  try {
+    const cfg = await api.get('/config/public')
+    securityPhone.value = cfg.security_center_phone ?? ''
+  } catch {
+    securityPhone.value = ''
+  }
+}
+
 onMounted(async () => {
-  await load()
+  await Promise.all([load(), loadSecurityPhone()])
   await connectSSE()
 })
 </script>
@@ -119,6 +168,24 @@ onMounted(async () => {
 .fahrer-header { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid #e0e0e0; }
 .fahrer-header h1 { font-size:18px; }
 .fahrt-detail { flex:1;padding:16px; }
+.security-bar {
+  background:#fff8e1;color:#795548;
+  border-bottom:1px solid #ffe082;
+  padding:8px 16px;font-size:13px;
+  text-align:center;
+}
+.security-bar a { color:#1565c0;font-weight:600;text-decoration:none; }
+.phone-box {
+  max-width:560px;margin:16px auto 0;
+  background:#ffebee;color:#b71c1c;
+  border:1px solid #ef9a9a;border-radius:8px;
+  padding:14px 16px;font-size:14px;
+  width:calc(100% - 32px);
+}
+.phone-box p { margin:6px 0 10px;font-size:13px; }
+.phone-box__form { display:flex;gap:8px; }
+.phone-box__form input { flex:1;padding:8px 10px;border:1px solid #ef9a9a;border-radius:6px;font-size:14px; }
+.phone-box__error { color:#c62828;font-size:12px;margin-top:6px; }
 .vertretung-banner {
   max-width:560px;margin:0 auto 12px;
   background:#f3e5f5;color:#6a1b9a;

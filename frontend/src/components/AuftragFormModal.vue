@@ -146,6 +146,26 @@
         </div>
 
         </fieldset>
+
+        <!-- Änderungshistorie (nur für bestehende Aufträge) -->
+        <div v-if="order" class="history">
+          <button type="button" class="history__toggle" @click="toggleHistory">
+            🕘 Änderungshistorie {{ showHistory ? '▲' : '▼' }}
+          </button>
+          <div v-if="showHistory" class="history__list">
+            <p v-if="historyLoading" class="history__empty">Laden…</p>
+            <p v-else-if="history.length === 0" class="history__empty">Keine Einträge</p>
+            <div v-for="(h, i) in history" :key="i" class="history__entry">
+              <span class="history__time">{{ formatDeadline(h.changed_at) }}</span>
+              <span class="history__user">{{ h.changed_by_name }}</span>
+              <span class="history__change">
+                <template v-if="h.old_status">{{ statusText(h.old_status) }} → {{ statusText(h.new_status) }}</template>
+                <template v-else>angelegt ({{ statusText(h.new_status) }})</template>
+              </span>
+            </div>
+          </div>
+        </div>
+
         <p v-if="error" class="error">{{ error }}</p>
         <div class="modal__footer">
           <button type="button" class="btn-ghost" @click="$emit('close')">{{ readonly ? 'Schließen' : 'Abbrechen' }}</button>
@@ -255,6 +275,28 @@ function formatDeadline(iso) {
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+const showHistory = ref(false)
+const historyLoading = ref(false)
+const history = ref([])
+
+function statusText(status) {
+  return status === 'erwartete_rueckfahrt' ? 'erwartete Rückfahrt' : status
+}
+
+// Historie bei jedem Aufklappen frisch aus der DB laden
+async function toggleHistory() {
+  showHistory.value = !showHistory.value
+  if (!showHistory.value) return
+  historyLoading.value = true
+  try {
+    history.value = await api.get(`/orders/${props.order.id}/history`)
+  } catch {
+    history.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     const cfg = await api.get('/config')
@@ -328,6 +370,18 @@ async function submit() {
 .field--toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .field--toggle input { width: auto; }
 .error { color: #c62828; font-size: 13px; margin-bottom: 10px; }
+
+.history { margin-top: 4px; }
+.history__toggle {
+  background: none; border: none; padding: 0;
+  font-size: 13px; color: #1565c0; cursor: pointer;
+}
+.history__list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.history__entry { display: flex; gap: 10px; font-size: 12px; color: #555; }
+.history__time { color: #888; white-space: nowrap; }
+.history__user { font-weight: 600; white-space: nowrap; }
+.history__change { flex: 1; }
+.history__empty { font-size: 12px; color: #aaa; }
 .deadline-row { display: flex; flex-direction: column; gap: 8px; }
 .deadline-date-btns { display: flex; gap: 6px; }
 .btn-date {

@@ -24,6 +24,7 @@
         <button v-if="canComplete" class="btn-icon btn-icon--success" title="Fahrt abschließen" @click="onComplete">✓</button>
         <button v-if="canAbort" class="btn-icon btn-icon--ghost-muted" title="Fahrt abbrechen" @click="onAbort">✕</button>
         <button v-if="trip.status === 'geplant'" class="btn-icon btn-icon--ghost" title="Drucken" @click="$emit('print')">🖨</button>
+        <button class="btn-icon btn-icon--ghost-muted" title="Änderungshistorie" @click="openHistory">🕘</button>
       </div>
     </div>
 
@@ -33,7 +34,13 @@
 
     <div class="fahrt-karte__info">
       <span :class="{ 'info--warn': !trip.vehicle }">🚗 {{ trip.vehicle ? `${trip.vehicle.name} (${trip.vehicle.license_plate})` : 'Fahrzeug fehlt' }}</span>
-      <span :class="{ 'info--warn': !trip.driver }">👤 {{ trip.driver?.name ?? 'Fahrer fehlt' }}</span>
+      <span
+        v-if="trip.driver"
+        class="driver-link"
+        title="Kontaktdaten anzeigen"
+        @click="showContact = true"
+      >👤 {{ trip.driver.name }}</span>
+      <span v-else class="info--warn">👤 Fahrer fehlt</span>
     </div>
 
     <!-- Routing-Info (nur für geplante Fahrten) -->
@@ -84,6 +91,46 @@
         <span :class="`badge badge--${to.order.trip_type}`" style="font-size:11px">{{ to.order.trip_type }}</span>
       </div>
     </VueDraggable>
+
+    <!-- Fahrer-Kontaktdaten (Overlay) -->
+    <Teleport to="body">
+      <div v-if="showContact && trip.driver" class="overlay-backdrop" @click.self="showContact = false">
+        <div class="overlay-card">
+          <div class="overlay-card__header">
+            <h3>👤 {{ trip.driver.name }}</h3>
+            <button class="overlay-card__close" @click="showContact = false">✕</button>
+          </div>
+          <div class="overlay-card__body">
+            <p v-if="trip.driver.phone">📞 <a :href="`tel:${trip.driver.phone}`">{{ trip.driver.phone }}</a></p>
+            <p v-else class="overlay-muted">Keine Telefonnummer hinterlegt</p>
+            <p v-if="trip.driver.email">✉️ <a :href="`mailto:${trip.driver.email}`">{{ trip.driver.email }}</a></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Änderungshistorie (Overlay) -->
+      <div v-if="showHistory" class="overlay-backdrop" @click.self="showHistory = false">
+        <div class="overlay-card">
+          <div class="overlay-card__header">
+            <h3>🕘 Änderungshistorie – {{ trip.name || 'Fahrt #' + trip.trip_number }}</h3>
+            <button class="overlay-card__close" @click="showHistory = false">✕</button>
+          </div>
+          <div class="overlay-card__body">
+            <p v-if="historyLoading" class="overlay-muted">Laden…</p>
+            <p v-else-if="history.length === 0" class="overlay-muted">Keine Einträge</p>
+            <div v-for="(h, i) in history" :key="i" class="history__entry">
+              <span class="history__time">{{ formatTime(h.changed_at) }}</span>
+              <span class="history__user">{{ h.changed_by_name }}</span>
+              <span class="history__change">
+                <template v-if="h.destination">Ziel „{{ h.destination }}" {{ h.new_status === 'erledigt' ? 'erledigt' : 'hinzugefügt' }}</template>
+                <template v-else-if="h.old_status">{{ h.old_status }} → {{ h.new_status }}</template>
+                <template v-else>angelegt ({{ h.new_status }})</template>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -91,6 +138,7 @@
 import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useNow } from '@/composables/useNow'
+import { api } from '@/api/client'
 
 const props = defineProps({ trip: Object, conflict: Object })
 const now = useNow()
@@ -205,6 +253,24 @@ const canAbort = computed(() =>
 
 function formatTime(iso) {
   return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+const showContact = ref(false)
+const showHistory = ref(false)
+const historyLoading = ref(false)
+const history = ref([])
+
+// Historie bei jedem Öffnen frisch aus der DB laden
+async function openHistory() {
+  showHistory.value = true
+  historyLoading.value = true
+  try {
+    history.value = await api.get(`/trips/${props.trip.id}/history`)
+  } catch {
+    history.value = []
+  } finally {
+    historyLoading.value = false
+  }
 }
 
 function formatEndTime(startIso, durationMinutes) {
@@ -323,4 +389,48 @@ function formatEndTime(startIso, durationMinutes) {
 }
 .routing-badge--manual { background: #fff3e0; color: #e65100; }
 .routing-badge--pending { background: #f5f5f5; color: #aaa; }
+
+.driver-link { cursor: pointer; color: #1565c0; }
+.driver-link:hover { text-decoration: underline; }
+
+.overlay-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.overlay-card {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.overlay-card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eee;
+}
+.overlay-card__header h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.overlay-card__close {
+  background: none; border: none;
+  font-size: 16px; color: #888; cursor: pointer;
+  padding: 2px 6px; border-radius: 4px; line-height: 1;
+}
+.overlay-card__close:hover { background: #f0f0f0; color: #333; }
+.overlay-card__body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 14px;
+}
+.overlay-card__body a { color: #1565c0; text-decoration: none; }
+.overlay-muted { color: #aaa; font-size: 13px; }
+
+.history__entry { display: flex; gap: 10px; font-size: 13px; color: #555; }
+.history__time { color: #888; white-space: nowrap; }
+.history__user { font-weight: 600; white-space: nowrap; }
+.history__change { flex: 1; }
 </style>

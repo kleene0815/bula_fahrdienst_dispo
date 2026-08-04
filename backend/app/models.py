@@ -17,6 +17,7 @@ class User(Base):
     keycloak_sub: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[str] = mapped_column(Text, nullable=False)
+    phone: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     roles: Mapped[list["UserRole"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -129,6 +130,7 @@ class AppConfig(Base):
     default_deadline_time: Mapped[str] = mapped_column(Text, nullable=False, default="17:00")
     destination_suggestions: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     camp_address: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    security_center_phone: Mapped[str] = mapped_column(Text, nullable=False, default="")
     routing_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     routing_mode: Mapped[str] = mapped_column(Text, nullable=False, default="auto")
     routing_remaining_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -8,6 +8,7 @@ class UserOut(BaseModel):
     id: uuid.UUID
     name: str
     email: str
+    phone: str | None
     roles: list[str]
     created_at: datetime
 
@@ -19,6 +20,7 @@ class UserOut(BaseModel):
             id=user.id,
             name=user.name,
             email=user.email,
+            phone=user.phone,
             roles=[r.role for r in user.roles],
             created_at=user.created_at,
         )
@@ -27,6 +29,8 @@ class UserOut(BaseModel):
 class UserListItem(BaseModel):
     id: uuid.UUID
     name: str
+    email: str
+    phone: str | None
     roles: list[str]
 
     model_config = {"from_attributes": True}
@@ -36,5 +40,11 @@ class UserListItem(BaseModel):
         return cls(
             id=user.id,
             name=user.name,
+            email=user.email,
+            phone=user.phone,
             roles=[r.role for r in user.roles],
         )
+
+
+class UserPhoneUpdate(BaseModel):
+    phone: str | None = None

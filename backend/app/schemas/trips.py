@@ -10,6 +10,8 @@ from app.schemas.vehicles import VehicleOut
 class DriverInfo(BaseModel):
     id: uuid.UUID
     name: str
+    email: str | None = None
+    phone: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -66,7 +68,12 @@ class TripOut(BaseModel):
             trip_number=trip.trip_number,
             name=trip.name,
             status=trip.status,
-            driver=DriverInfo(id=trip.driver.id, name=trip.driver.name) if trip.driver else None,
+            driver=DriverInfo(
+                id=trip.driver.id,
+                name=trip.driver.name,
+                email=trip.driver.email,
+                phone=trip.driver.phone,
+            ) if trip.driver else None,
             vehicle=VehicleOut.model_validate(trip.vehicle) if trip.vehicle else None,
             qr_token=trip.qr_token,
             notes=trip.notes,

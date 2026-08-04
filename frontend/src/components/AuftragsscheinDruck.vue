@@ -48,6 +48,19 @@
                 </span>
               </td>
             </tr>
+            <tr>
+              <td>🏕</td>
+              <td>
+                Rückfahrt zum Lagerplatz
+                <template v-if="config.camp_address">
+                  <br />
+                  <small style="color:#888">{{ config.camp_address }}</small>
+                </template>
+              </td>
+              <td></td>
+              <td>–</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
 
