@@ -120,7 +120,7 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Geo-Link für Zieladresse, damit auf dem Handy direkt die Navi-App geöffnet werden kann.
 - [x] Änderungshistorie für Aufträge und Fahrten (Wer hat wann welchen Status verändert.)
 - [x] Beim Auftragsschein soll als letzes Ziel wieder der Lagerplatz angezeigt werden (auch in der Fahrer-Ansicht)
-- [] In der Auftragsliste der offenen Aufträge sollen die Aufträge in mehrere Kategorien aufgeteilt werden. Die Kategorien sollen auf- und zugeklaptt werden können. Die Anzahl der enthaltenen Aufträge soll auch im zugeklappten Zustand angezeigt werden:
+- [x] In der Auftragsliste der offenen Aufträge sollen die Aufträge in mehrere Kategorien aufgeteilt werden. Die Kategorien sollen auf- und zugeklaptt werden können. Die Anzahl der enthaltenen Aufträge soll auch im zugeklappten Zustand angezeigt werden:
   - Überfällige Aufträge (Deadline in der Vergangenheit)-> Kategorie darf nicht zugeklappt werden
   - Aktuelle Aufträge (Aufträge mit einer Deadline innerhalb der nächsten 12 Stunden) -> Kategorie inial aufgeklappt
   - zukünftige Aufträge -> Kategorie initial geschlossen

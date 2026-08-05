@@ -33,14 +33,45 @@
           >{{ f.label }}</button>
         </div>
         <div class="card-list">
-          <AuftragKarte
-            v-for="order in filteredOrders"
-            :key="order.id"
-            :order="order"
-            @cancel="ordersStore.cancel(order.id)"
-            @edit="editingOrder = order; showOrderForm = true"
-            @open="onOpenOrder(order)"
-          />
+          <template v-if="activeFilter === 'offen'">
+            <template v-for="cat in orderCategories" :key="cat.key">
+              <section v-if="cat.orders.length" class="order-category">
+                <div
+                  :class="['category-header', {
+                    'category-header--ueberfaellig': cat.key === 'ueberfaellig',
+                    'category-header--clickable': cat.collapsible,
+                  }]"
+                  @click="cat.collapsible && toggleCategory(cat.key)"
+                >
+                  <span v-if="cat.collapsible" class="category-chevron">
+                    {{ collapsedCategories.has(cat.key) ? '▸' : '▾' }}
+                  </span>
+                  <span class="category-label">{{ cat.label }}</span>
+                  <span class="category-count">{{ cat.orders.length }}</span>
+                </div>
+                <template v-if="!cat.collapsible || !collapsedCategories.has(cat.key)">
+                  <AuftragKarte
+                    v-for="order in cat.orders"
+                    :key="order.id"
+                    :order="order"
+                    @cancel="ordersStore.cancel(order.id)"
+                    @edit="editingOrder = order; showOrderForm = true"
+                    @open="onOpenOrder(order)"
+                  />
+                </template>
+              </section>
+            </template>
+          </template>
+          <template v-else>
+            <AuftragKarte
+              v-for="order in filteredOrders"
+              :key="order.id"
+              :order="order"
+              @cancel="ordersStore.cancel(order.id)"
+              @edit="editingOrder = order; showOrderForm = true"
+              @open="onOpenOrder(order)"
+            />
+          </template>
           <p v-if="filteredOrders.length === 0" class="empty">Keine Aufträge</p>
         </div>
       </section>
@@ -126,6 +157,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrdersStore } from '@/stores/orders'
 import { useTripsStore } from '@/stores/trips'
+import { useNow } from '@/composables/useNow'
 import { api } from '@/api/client'
 import AuftragKarte from '@/components/AuftragKarte.vue'
 import FahrtKarte from '@/components/FahrtKarte.vue'
@@ -253,6 +285,40 @@ const filteredOrders = computed(() => {
 const openOrders = computed(() =>
   ordersStore.orders.filter((o) => ['offen', 'erwartete_rueckfahrt'].includes(o.status))
 )
+
+// Kategorisierung der offenen Aufträge nach Deadline (Backend liefert bereits
+// nach Deadline aufsteigend sortiert, dadurch bleiben die Buckets sortiert).
+const now = useNow()
+const ZWOELF_STUNDEN = 12 * 60 * 60 * 1000
+
+const collapsedCategories = ref(new Set(['zukuenftig', 'ohne_deadline']))
+
+function toggleCategory(key) {
+  const next = new Set(collapsedCategories.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  collapsedCategories.value = next
+}
+
+const orderCategories = computed(() => {
+  const cats = {
+    ueberfaellig: { key: 'ueberfaellig', label: 'Überfällig', collapsible: false, orders: [] },
+    aktuell: { key: 'aktuell', label: 'Aktuell (nächste 12 Std.)', collapsible: true, orders: [] },
+    zukuenftig: { key: 'zukuenftig', label: 'Zukünftig', collapsible: true, orders: [] },
+    ohne_deadline: { key: 'ohne_deadline', label: 'Ohne Deadline', collapsible: true, orders: [] },
+  }
+  for (const o of filteredOrders.value) {
+    if (!o.deadline) {
+      cats.ohne_deadline.orders.push(o)
+      continue
+    }
+    const t = new Date(o.deadline).getTime()
+    if (t < now.value) cats.ueberfaellig.orders.push(o)
+    else if (t <= now.value + ZWOELF_STUNDEN) cats.aktuell.orders.push(o)
+    else cats.zukuenftig.orders.push(o)
+  }
+  return Object.values(cats)
+})
 
 // Für FahrtFormModal: offene Aufträge + ggf. vorausgewählter Auftrag (auch wenn noch zugeteilt)
 const tripFormOrders = computed(() => {
@@ -481,6 +547,41 @@ onUnmounted(() => {
   gap: 8px;
 }
 .empty { color: #aaa; font-size: 13px; text-align: center; padding: 20px 0; }
+
+.order-category {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 1px solid #e0e0e0;
+  user-select: none;
+}
+.category-header--clickable { cursor: pointer; }
+.category-header--ueberfaellig {
+  color: #c62828;
+  border-bottom-color: #c62828;
+}
+.category-chevron { font-size: 11px; width: 12px; }
+.category-count {
+  margin-left: auto;
+  background: #eee;
+  color: #555;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 12px;
+}
+.category-header--ueberfaellig .category-count {
+  background: #fdf1f1;
+  color: #c62828;
+}
 
 .neue-fahrt-zone {
   border: 2px dashed #ccc;
