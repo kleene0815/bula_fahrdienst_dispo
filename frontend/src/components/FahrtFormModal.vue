@@ -187,6 +187,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { useTripsStore } from '@/stores/trips'
 import { useVehiclesStore } from '@/stores/vehicles'
 import { api } from '@/api/client'
+import { computeNeededSeats } from '@/utils/seatOccupancy'
 
 const props = defineProps({ trip: Object, openOrders: Array, preSelectedOrderId: String })
 const emit = defineEmits(['saved', 'close'])
@@ -308,17 +309,8 @@ watch(
   { deep: true },
 )
 
-// Kapazitätsberechnung basiert auf ausgewählten Aufträgen
-const usedSeats = computed(() => {
-  let seats = 1
-  for (const o of selectedOrderObjects.value) {
-    if (o.patient_name) {
-      seats += 1
-      if (o.companion) seats += 1
-    }
-  }
-  return seats
-})
+// Kapazitätsberechnung: Spitzenbelegung über die Fahrtabschnitte in Stopp-Reihenfolge
+const usedSeats = computed(() => computeNeededSeats(selectedOrderObjects.value))
 
 const selectedVehicle = computed(() =>
   vehiclesStore.vehicles.find((v) => v.id === form.vehicle_id)

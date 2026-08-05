@@ -67,7 +67,7 @@
           :style="{ width: Math.min(seatRatio * 100, 100) + '%' }"
         ></div>
       </div>
-      <span class="kapazitaet__label">{{ usedSeats }} / {{ trip.vehicle.seats }} Sitze</span>
+      <span class="kapazitaet__label" title="Maximale gleichzeitige Belegung inkl. Fahrer">{{ usedSeats }} / {{ trip.vehicle.seats }} Sitze</span>
     </div>
 
     <!-- Stoppliste -->
@@ -139,6 +139,7 @@ import { computed, ref, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useNow } from '@/composables/useNow'
 import { api } from '@/api/client'
+import { computeNeededSeats } from '@/utils/seatOccupancy'
 
 const props = defineProps({ trip: Object, conflict: Object })
 const now = useNow()
@@ -230,16 +231,10 @@ const routeCities = computed(() => {
   return cities
 })
 
-const usedSeats = computed(() => {
-  let seats = 1 // Fahrer
-  for (const { order: o } of props.trip.orders) {
-    if (o.patient_name) {
-      seats += 1
-      if (o.companion) seats += 1
-    }
-  }
-  return seats
-})
+// localOrders statt props.trip.orders, damit der Balken beim Umsortieren sofort reagiert
+const usedSeats = computed(() =>
+  computeNeededSeats(localOrders.value.map((to) => to.order))
+)
 
 const seatRatio = computed(() =>
   props.trip.vehicle ? usedSeats.value / props.trip.vehicle.seats : 0

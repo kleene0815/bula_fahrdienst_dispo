@@ -126,7 +126,7 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
   - zukünftige Aufträge -> Kategorie initial geschlossen
   - Aufträge ohne Deadline -> Kategorie initial geschlossen
 - [x] Die Angabe einer Deadline bei Aufträge sollte optional sein, damit man auch Aufträge anlegen kann, bei denen der Ausführungszeitpunkt noch nicht feststeht.
-- [] Die Kapazitäts-Berechnung soll umgebaut werden, dass nicht einfach nur die Personen aller Aufträge zusammen gerechnet werden.
+- [x] Die Kapazitäts-Berechnung soll umgebaut werden, dass nicht einfach nur die Personen aller Aufträge zusammen gerechnet werden.
   - Die Berechnung der Personenzahlen soll für jeden Fahrtabschnitt berechnet werden. Bei Hinfahrten sollen die Personen vom Start bis zum Zielort einberechnet werden
   - Bei Rückfahrten sollen die Personen vom Zielort bis zurück zum Lagerplatz berechnet werden.
 ### Offene Änderungswünsche

@@ -82,13 +82,25 @@ def _trip_query():
 
 
 def _compute_seats(orders: list[Order]) -> int:
-    seats = 1  # Fahrersitz
-    for o in orders:
-        if o.patient_name:
-            seats += 1
-            if o.companion:
-                seats += 1
-    return seats
+    """Sitzbedarf als Spitzenbelegung über die Fahrtabschnitte.
+
+    Die Route ist immer Lager → Stopp 1 → … → Stopp N → Lager (Segmente 0..N).
+    Hinfahrten belegen Sitze vom Lager bis zum eigenen Stopp (Segmente 0..j),
+    Abholungen vom eigenen Stopp bis zurück zum Lager (Segmente j+1..N).
+    `orders` muss in Stopp-Reihenfolge übergeben werden.
+    """
+    n = len(orders)
+    segments = [0] * (n + 1)
+    for j, o in enumerate(orders):
+        if o.trip_type == "besorgung" or not o.patient_name:
+            continue
+        persons = 2 if o.companion else 1
+        # Unbekannter Fahrttyp mit Patient: konservativ auf allen Segmenten einrechnen
+        start = j + 1 if o.trip_type == "abholung" else 0
+        end = j if o.trip_type == "hinfahrt" else n
+        for k in range(start, end + 1):
+            segments[k] += persons
+    return 1 + max(segments)  # Fahrersitz + Spitzenbelegung
 
 
 async def _detach_from_other_trip(
@@ -253,7 +265,9 @@ async def create_trip(
         vehicle = await db.get(Vehicle, body.vehicle_id)
         if not vehicle:
             raise HTTPException(status_code=404, detail="Fahrzeug nicht gefunden")
-        needed = _compute_seats(orders)
+        # In Stopp-Reihenfolge (body.order_ids) prüfen — DB-Reihenfolge ist nicht garantiert
+        by_id = {o.id: o for o in orders}
+        needed = _compute_seats([by_id[oid] for oid in body.order_ids])
         if needed > vehicle.seats:
             raise HTTPException(status_code=409, detail=f"Kapazität überschritten: {needed} von {vehicle.seats} Sitzen belegt")
 
@@ -394,7 +408,9 @@ async def update_trip(
         if trip.vehicle_id:
             vehicle = await db.get(Vehicle, trip.vehicle_id)
             all_orders_result = await db.execute(select(Order).where(Order.id.in_(body.order_ids)))
-            all_orders = list(all_orders_result.scalars().all())
+            by_id = {o.id: o for o in all_orders_result.scalars().all()}
+            # In Stopp-Reihenfolge (body.order_ids) prüfen — DB-Reihenfolge ist nicht garantiert
+            all_orders = [by_id[oid] for oid in body.order_ids]
             if vehicle and _compute_seats(all_orders) > vehicle.seats:
                 raise HTTPException(status_code=409, detail="Kapazität überschritten")
 
