@@ -120,6 +120,15 @@ Grundimplementierung abgeschlossen und in der Entwicklungsumgebung getestet. Off
 - [x] Geo-Link für Zieladresse, damit auf dem Handy direkt die Navi-App geöffnet werden kann.
 - [x] Änderungshistorie für Aufträge und Fahrten (Wer hat wann welchen Status verändert.)
 - [x] Beim Auftragsschein soll als letzes Ziel wieder der Lagerplatz angezeigt werden (auch in der Fahrer-Ansicht)
+- [] In der Auftragsliste der offenen Aufträge sollen die Aufträge in mehrere Kategorien aufgeteilt werden. Die Kategorien sollen auf- und zugeklaptt werden können. Die Anzahl der enthaltenen Aufträge soll auch im zugeklappten Zustand angezeigt werden:
+  - Überfällige Aufträge (Deadline in der Vergangenheit)-> Kategorie darf nicht zugeklappt werden
+  - Aktuelle Aufträge (Aufträge mit einer Deadline innerhalb der nächsten 12 Stunden) -> Kategorie inial aufgeklappt
+  - zukünftige Aufträge -> Kategorie initial geschlossen
+  - Aufträge ohne Deadline -> Kategorie initial geschlossen
+- [x] Die Angabe einer Deadline bei Aufträge sollte optional sein, damit man auch Aufträge anlegen kann, bei denen der Ausführungszeitpunkt noch nicht feststeht.
+- [] Die Kapazitäts-Berechnung soll umgebaut werden, dass nicht einfach nur die Personen aller Aufträge zusammen gerechnet werden.
+  - Die Berechnung der Personenzahlen soll für jeden Fahrtabschnitt berechnet werden. Bei Hinfahrten sollen die Personen vom Start bis zum Zielort einberechnet werden
+  - Bei Rückfahrten sollen die Personen vom Zielort bis zurück zum Lagerplatz berechnet werden.
 ### Offene Änderungswünsche
 
 ### Bugs

@@ -106,7 +106,11 @@ async def update_order(
     if order.status not in ("offen", "erwartete_rueckfahrt", "zugeteilt"):
         raise HTTPException(status_code=409, detail="Auftrag kann in diesem Status nicht bearbeitet werden")
 
-    for field, value in body.model_dump(exclude_none=True).items():
+    data = body.model_dump(exclude_none=True)
+    # deadline darf explizit auf null gesetzt werden (Deadline entfernen)
+    if "deadline" in body.model_fields_set:
+        data["deadline"] = body.deadline
+    for field, value in data.items():
         setattr(order, field, value)
 
     await db.commit()

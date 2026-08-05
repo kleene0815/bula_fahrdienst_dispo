@@ -69,9 +69,9 @@
           <input v-model="form.destination_city" type="text" placeholder="z.B. 86150 Augsburg" />
         </div>
         <div class="field">
-          <label>Deadline / Termin {{ readonly ? '' : '*' }}</label>
+          <label>Deadline / Termin {{ readonly || deadlineDateMode === 'ohne' ? '' : '*' }}</label>
           <p v-if="readonly" class="deadline-static">
-            {{ order?.deadline ? formatDeadline(order.deadline) : 'Noch keine Deadline (erwartete Rückfahrt)' }}
+            {{ order?.deadline ? formatDeadline(order.deadline) : 'Noch keine Deadline' }}
           </p>
           <div v-else class="deadline-row">
             <div class="deadline-date-btns">
@@ -90,6 +90,11 @@
                 :class="['btn-date', deadlineDateMode === 'datum' && 'btn-date--active']"
                 @click="deadlineDateMode = 'datum'"
               >Datum wählen</button>
+              <button
+                type="button"
+                :class="['btn-date', deadlineDateMode === 'ohne' && 'btn-date--active']"
+                @click="deadlineDateMode = 'ohne'"
+              >Ohne Deadline</button>
             </div>
             <input
               v-if="deadlineDateMode === 'datum'"
@@ -99,6 +104,7 @@
               class="deadline-date-input"
             />
             <input
+              v-if="deadlineDateMode !== 'ohne'"
               v-model="deadlineTime"
               type="time"
               :required="!readonly"
@@ -267,6 +273,8 @@ watch(() => props.order, (o) => {
     deadlineDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
     deadlineTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`
     deadlineDateMode.value = 'datum'
+  } else {
+    deadlineDateMode.value = 'ohne'
   }
   Object.assign(form, { ...o })
 }, { immediate: true })
@@ -313,7 +321,9 @@ async function submit() {
   saving.value = true
   error.value = null
   try {
-    const deadline = new Date(`${resolvedDeadlineDate()}T${deadlineTime.value}:00`).toISOString()
+    const deadline = deadlineDateMode.value === 'ohne'
+      ? null
+      : new Date(`${resolvedDeadlineDate()}T${deadlineTime.value}:00`).toISOString()
     const payload = {
       ...form,
       deadline,

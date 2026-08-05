@@ -10,7 +10,7 @@ class OrderCreate(BaseModel):
     destination: str
     destination_street: str | None = None
     destination_city: str | None = None
-    deadline: datetime
+    deadline: datetime | None = None
     priority: str = "normal"
     patient_name: str | None = None
     phone: str | None = None
